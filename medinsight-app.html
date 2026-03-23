@@ -1,0 +1,1987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedInsight — Personal Medical Report Library</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;450;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --white: #ffffff;
+  --bg: #fafaf9;
+  --bg2: #f5f4f2;
+  --border: #e5e3df;
+  --border2: #d4d1cb;
+  --text: #1a1916;
+  --text2: #6b6760;
+  --text3: #9c9890;
+  --accent: #c96442;      /* warm terracotta — medical warmth */
+  --accent-light: #f5ede9;
+  --accent-dark: #a0472e;
+  --green: #2d7a57;
+  --green-light: #e8f5ee;
+  --amber: #b07d2a;
+  --amber-light: #fdf3e3;
+  --red: #c0392b;
+  --red-light: #fdecea;
+  --blue: #2563a8;
+  --blue-light: #eff4fb;
+  --r: 8px;
+  --r2: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow2: 0 4px 12px rgba(0,0,0,0.08);
+  --font: 'Geist', system-ui, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-mono: 'Geist Mono', monospace;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Layout Shell ─────────────────────────────────────────── */
+.shell { display: flex; min-height: 100vh; }
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+.sidebar {
+  width: 228px;
+  flex-shrink: 0;
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 40;
+  overflow-y: auto;
+}
+
+.sidebar-head {
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+}
+
+.wm-icon {
+  width: 28px; height: 28px;
+  background: var(--accent);
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.wm-icon svg { width: 15px; height: 15px; stroke: white; fill: none; stroke-width: 2.2; stroke-linecap: round; }
+
+.wm-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.sidebar-nav { padding: 10px 10px; flex: 1; }
+
+.nav-group { margin-bottom: 2px; }
+.nav-group-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 10px 8px 5px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--text2);
+  font-size: 13.5px;
+  font-weight: 450;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  margin-bottom: 1px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.nav-link:hover { background: var(--bg); color: var(--text); }
+.nav-link.active { background: var(--accent-light); color: var(--accent-dark); font-weight: 500; }
+
+.nav-link svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.7; }
+.nav-link.active svg { opacity: 1; }
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--accent);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+.nav-badge.green { background: var(--green); }
+.nav-badge.amber { background: var(--amber); }
+
+.sidebar-user {
+  padding: 12px 10px;
+  border-top: 1px solid var(--border);
+}
+
+.user-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.user-row:hover { background: var(--bg); }
+
+.avatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: var(--accent-dark);
+  flex-shrink: 0;
+  font-family: var(--font);
+}
+
+.user-meta .uname { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.3; }
+.user-meta .usub { font-size: 11px; color: var(--text3); }
+
+/* ── Main ─────────────────────────────────────────────────── */
+.main { margin-left: 228px; flex: 1; display: flex; flex-direction: column; }
+
+/* ── Topbar ───────────────────────────────────────────────── */
+.topbar {
+  height: 52px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 28px;
+  background: var(--white);
+  position: sticky; top: 0; z-index: 30;
+  gap: 12px;
+}
+
+.topbar-title { font-size: 14px; font-weight: 500; color: var(--text); }
+.topbar-sep { width: 1px; height: 16px; background: var(--border2); }
+.topbar-sub { font-size: 13px; color: var(--text3); }
+
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 13px;
+  border-radius: 6px;
+  font-family: var(--font);
+  font-size: 13px; font-weight: 450;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: var(--white);
+  color: var(--text2);
+  transition: all 0.12s;
+  text-decoration: none;
+}
+.btn:hover { background: var(--bg); color: var(--text); border-color: var(--border2); }
+.btn svg { width: 13px; height: 13px; }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 500;
+}
+.btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); color: white; }
+
+.abha-status {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  background: var(--green-light);
+  border: 1px solid rgba(45,122,87,0.2);
+  border-radius: 20px;
+  font-size: 12px; color: var(--green);
+  font-weight: 500;
+}
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  animation: blink 2.5s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── Page Content ─────────────────────────────────────────── */
+.page { display: none; padding: 28px; flex: 1; max-width: 1100px; }
+.page.active { display: block; animation: fadeIn 0.18s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── Section headings ─────────────────────────────────────── */
+.page-header { margin-bottom: 24px; }
+.page-title { font-family: var(--font-serif); font-size: 24px; color: var(--text); font-weight: 400; letter-spacing: -0.01em; margin-bottom: 4px; }
+.page-sub { font-size: 13.5px; color: var(--text3); }
+
+/* ── Cards ────────────────────────────────────────────────── */
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 20px 22px;
+  box-shadow: var(--shadow);
+}
+.card-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.card-sub { font-size: 12px; color: var(--text3); }
+.card-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+
+/* ── Dashboard ────────────────────────────────────────────── */
+.dash-grid-top {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+.stat-label { font-size: 12px; color: var(--text3); margin-bottom: 8px; font-weight: 450; }
+.stat-value { font-size: 28px; font-weight: 600; color: var(--text); line-height: 1; letter-spacing: -0.02em; font-family: var(--font); }
+.stat-delta { font-size: 11.5px; margin-top: 5px; font-weight: 450; }
+.delta-up { color: var(--green); }
+.delta-down { color: var(--red); }
+.delta-neu { color: var(--text3); }
+
+.dash-grid-main {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* ── Timeline ─────────────────────────────────────────────── */
+.timeline { display: flex; flex-direction: column; gap: 0; }
+
+.tl-item {
+  display: flex; gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+  border-radius: 0;
+  position: relative;
+}
+.tl-item:last-child { border-bottom: none; }
+.tl-item:hover { background: var(--bg); margin: 0 -8px; padding: 14px 8px; border-radius: 6px; }
+
+.tl-icon {
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 15px;
+}
+.ti-lab { background: var(--blue-light); }
+.ti-rx { background: var(--green-light); }
+.ti-scan { background: var(--amber-light); }
+.ti-note { background: var(--bg2); }
+.ti-ecg { background: var(--red-light); }
+
+.tl-body { flex: 1; min-width: 0; }
+.tl-name { font-size: 13.5px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+.tl-meta { font-size: 12px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.tl-right { text-align: right; flex-shrink: 0; }
+.tl-date { font-size: 11.5px; color: var(--text3); font-family: var(--font-mono); margin-bottom: 4px; }
+
+/* ── Badges ───────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 20px;
+  font-size: 11px; font-weight: 500;
+}
+.badge::before { content:''; width:5px; height:5px; border-radius:50%; background:currentColor; }
+.b-green { background: var(--green-light); color: var(--green); }
+.b-amber { background: var(--amber-light); color: var(--amber); }
+.b-red { background: var(--red-light); color: var(--red); }
+.b-blue { background: var(--blue-light); color: var(--blue); }
+.b-gray { background: var(--bg2); color: var(--text3); }
+
+/* ── AI Insights Panel ────────────────────────────────────── */
+.insight-list { display: flex; flex-direction: column; gap: 10px; }
+
+.insight-card {
+  padding: 13px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.insight-card:hover { border-color: var(--border2); box-shadow: var(--shadow); }
+
+.insight-head { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 5px; }
+.insight-pip {
+  width: 7px; height: 7px; border-radius: 50%;
+  flex-shrink: 0; margin-top: 5px;
+}
+.pip-green { background: var(--green); }
+.pip-amber { background: var(--amber); }
+.pip-blue { background: var(--blue); }
+.pip-red { background: var(--red); }
+
+.insight-title { font-size: 12.5px; font-weight: 500; color: var(--text); line-height: 1.45; }
+.insight-body { font-size: 12px; color: var(--text3); line-height: 1.5; padding-left: 15px; margin-bottom: 5px; }
+.insight-tag { font-size: 10.5px; color: var(--text3); padding-left: 15px; font-family: var(--font-mono); }
+
+/* ── Upload Area ──────────────────────────────────────────── */
+.upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+
+.upload-zone {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--r2);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--white);
+}
+.upload-zone:hover { border-color: var(--accent); background: var(--accent-light); }
+.upload-zone.drag-active { border-color: var(--accent); background: var(--accent-light); }
+
+.uz-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px;
+  font-size: 20px;
+}
+.uzi-blue { background: var(--blue-light); }
+.uzi-green { background: var(--green-light); }
+.uzi-amber { background: var(--amber-light); }
+.uzi-red { background: var(--red-light); }
+
+.uz-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.uz-desc { font-size: 12.5px; color: var(--text3); margin-bottom: 10px; line-height: 1.5; }
+.uz-formats { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-bottom: 14px; }
+
+.uz-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px;
+  border-radius: 6px;
+  font-size: 13px; font-weight: 500;
+  border: none; cursor: pointer;
+  font-family: var(--font);
+  transition: all 0.12s;
+}
+.uzb-blue { background: var(--blue); color: white; }
+.uzb-blue:hover { background: #1d52a0; }
+.uzb-green { background: var(--green); color: white; }
+.uzb-green:hover { background: #226045; }
+
+/* ── Records Table ────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13.5px;
+}
+thead th {
+  text-align: left;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text3);
+  padding: 0 12px 10px;
+  border-bottom: 1px solid var(--border);
+}
+tbody tr { cursor: pointer; }
+tbody tr:not(:last-child) td { border-bottom: 1px solid var(--border); }
+tbody tr:hover td { background: var(--bg); }
+tbody td { padding: 12px 12px; vertical-align: middle; }
+
+.rec-name { font-weight: 500; color: var(--text); margin-bottom: 1px; }
+.rec-src { font-size: 11.5px; color: var(--text3); }
+
+.action-btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--text3);
+  font-size: 11.5px;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.action-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Report Viewer ────────────────────────────────────────── */
+.report-view { display: none; }
+.report-view.open { display: block; animation: fadeIn 0.18s ease; }
+
+.report-header {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 20px 22px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.rh-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+
+.rh-title { font-family: var(--font-serif); font-size: 20px; color: var(--text); margin-bottom: 3px; }
+.rh-meta { font-size: 12.5px; color: var(--text3); display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
+.rh-meta span { display: flex; align-items: center; gap: 4px; }
+
+.rh-actions { margin-left: auto; display: flex; gap: 8px; flex-shrink: 0; align-items: flex-start; }
+
+.report-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+/* ── Lab Values ───────────────────────────────────────────── */
+.lab-grid { display: flex; flex-direction: column; gap: 0; }
+
+.lab-row {
+  display: flex; align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.lab-row:last-child { border-bottom: none; }
+
+.lab-name { font-size: 13px; color: var(--text); flex: 1; min-width: 0; }
+.lab-sub { font-size: 11px; color: var(--text3); }
+
+.lab-val {
+  font-family: var(--font-mono);
+  font-size: 14px; font-weight: 500;
+  text-align: right; flex-shrink: 0;
+  min-width: 80px;
+}
+.lv-ok { color: var(--green); }
+.lv-warn { color: var(--amber); }
+.lv-high { color: var(--red); }
+.lv-neu { color: var(--text2); }
+
+.lab-bar-wrap { width: 70px; height: 4px; background: var(--bg2); border-radius: 2px; flex-shrink: 0; }
+.lab-bar { height: 100%; border-radius: 2px; }
+.lb-ok { background: var(--green); }
+.lb-warn { background: var(--amber); }
+.lb-high { background: var(--red); }
+.lb-low { background: var(--blue); }
+
+/* ── Translation Panel ────────────────────────────────────── */
+.translation-box {
+  background: var(--accent-light);
+  border: 1px solid rgba(201,100,66,0.2);
+  border-radius: var(--r2);
+  padding: 18px 20px;
+}
+.tb-head {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px;
+}
+.tb-icon { font-size: 16px; }
+.tb-label { font-size: 12px; font-weight: 600; color: var(--accent-dark); letter-spacing: 0.04em; text-transform: uppercase; }
+
+.tb-text { font-size: 14px; color: var(--text); line-height: 1.65; margin-bottom: 14px; }
+
+.action-items { display: flex; flex-direction: column; gap: 7px; }
+.action-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 9px 12px;
+  background: var(--white);
+  border: 1px solid rgba(201,100,66,0.15);
+  border-radius: 7px;
+  font-size: 12.5px; color: var(--text);
+  line-height: 1.45;
+}
+.action-item::before {
+  content: '→';
+  color: var(--accent);
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Correlation Engine Page ──────────────────────────────── */
+.corr-list { display: flex; flex-direction: column; gap: 10px; }
+
+.corr-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+  display: flex; align-items: flex-start; gap: 14px;
+}
+
+.corr-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+
+.corr-body { flex: 1; }
+.corr-title { font-size: 13.5px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.corr-desc { font-size: 12.5px; color: var(--text3); line-height: 1.5; }
+.corr-tag { font-size: 10.5px; color: var(--text3); font-family: var(--font-mono); margin-top: 6px; }
+
+.corr-delta {
+  text-align: right; flex-shrink: 0;
+  font-family: var(--font-mono);
+}
+.cd-val { font-size: 18px; font-weight: 600; }
+.cd-label { font-size: 10.5px; color: var(--text3); margin-top: 2px; }
+
+/* ── Health Profile ───────────────────────────────────────── */
+.profile-grid { display: grid; grid-template-columns: 260px 1fr; gap: 20px; }
+
+.profile-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.profile-hero {
+  background: var(--accent-light);
+  padding: 28px 20px;
+  text-align: center;
+  border-bottom: 1px solid rgba(201,100,66,0.15);
+}
+
+.pa-avatar {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: var(--white);
+  border: 2px solid rgba(201,100,66,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 600;
+  color: var(--accent-dark);
+  margin: 0 auto 12px;
+  font-family: var(--font);
+}
+
+.pa-name { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.pa-sub { font-size: 12px; color: var(--text3); }
+
+.profile-meta { padding: 16px 20px; }
+
+.meta-row {
+  display: flex; justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.meta-row:last-child { border-bottom: none; }
+.meta-key { color: var(--text3); }
+.meta-val { color: var(--text); font-weight: 450; }
+
+.vitals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+
+.vital-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+.vc-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+.vc-val { font-family: var(--font-mono); font-size: 18px; font-weight: 500; color: var(--text); }
+.vc-unit { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.vc-status { margin-top: 6px; }
+
+/* ── Alerts page ──────────────────────────────────────────── */
+.alerts-list { display: flex; flex-direction: column; gap: 10px; }
+
+.alert-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+  display: flex; gap: 12px;
+}
+.alert-card.severity-high { border-left: 3px solid var(--red); }
+.alert-card.severity-med { border-left: 3px solid var(--amber); }
+.alert-card.severity-low { border-left: 3px solid var(--blue); }
+.alert-card.severity-ok { border-left: 3px solid var(--green); }
+
+.alert-icon { font-size: 18px; flex-shrink: 0; padding-top: 1px; }
+.alert-body { flex: 1; }
+.alert-title { font-size: 13.5px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.alert-desc { font-size: 12.5px; color: var(--text3); line-height: 1.5; margin-bottom: 8px; }
+.alert-source { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+.alert-actions { display: flex; gap: 7px; margin-top: 10px; }
+
+/* ── Consent page ─────────────────────────────────────────── */
+.consent-list { display: flex; flex-direction: column; gap: 10px; }
+
+.consent-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+  display: flex; align-items: center; gap: 14px;
+}
+.cc-icon { font-size: 22px; flex-shrink: 0; }
+.cc-body { flex: 1; }
+.cc-name { font-size: 13.5px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+.cc-meta { font-size: 12px; color: var(--text3); }
+.cc-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+.toggle-wrap { display: flex; align-items: center; gap: 7px; }
+.toggle { position: relative; width: 36px; height: 20px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0;
+  background: var(--border2); border-radius: 20px;
+  cursor: pointer; transition: background 0.2s;
+}
+.toggle input:checked + .toggle-track { background: var(--green); }
+.toggle-thumb {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 14px; height: 14px;
+  border-radius: 50%; background: white;
+  transition: transform 0.2s;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle input:checked ~ .toggle-thumb { transform: translateX(16px); }
+
+/* ── Share page ───────────────────────────────────────────── */
+.share-form { max-width: 520px; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+.form-input, .form-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--white);
+  transition: border-color 0.12s;
+  outline: none;
+}
+.form-input:focus, .form-select:focus { border-color: var(--accent); }
+
+.share-link-box {
+  display: flex; gap: 8px; align-items: center;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 16px;
+}
+.sl-url { font-family: var(--font-mono); font-size: 12px; color: var(--blue); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Emergency QR ─────────────────────────────────────────── */
+.qr-layout { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: start; }
+
+.qr-box {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 20px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  width: 200px; flex-shrink: 0;
+}
+
+.qr-code {
+  width: 160px; height: 160px;
+  background: var(--bg2);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px;
+  font-size: 64px;
+}
+.qr-label { font-size: 12px; color: var(--text3); }
+
+.emergency-info { background: var(--red-light); border: 1px solid rgba(192,57,43,0.15); border-radius: var(--r2); padding: 16px 18px; }
+.ei-title { font-size: 13.5px; font-weight: 600; color: var(--red); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.ei-row { display: flex; gap: 8px; margin-bottom: 6px; font-size: 13px; color: var(--text); }
+.ei-key { color: var(--text3); flex-shrink: 0; width: 100px; }
+
+/* ── Modal ────────────────────────────────────────────────── */
+.modal-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
+  z-index: 200; align-items: center; justify-content: center;
+}
+.modal-backdrop.open { display: flex; }
+
+.modal {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  width: 480px;
+  max-width: 90vw;
+  box-shadow: var(--shadow2);
+  animation: fadeIn 0.18s ease;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--bg);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--text3);
+  transition: all 0.12s;
+}
+.modal-close:hover { background: var(--border); color: var(--text); }
+
+.modal-title { font-family: var(--font-serif); font-size: 20px; color: var(--text); margin-bottom: 4px; }
+.modal-sub { font-size: 13px; color: var(--text3); margin-bottom: 20px; }
+
+.drop-zone-big {
+  border: 1.5px dashed var(--border2);
+  border-radius: 10px; padding: 36px 20px;
+  text-align: center; cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg);
+}
+.drop-zone-big:hover { border-color: var(--accent); background: var(--accent-light); }
+
+.dz-icon { font-size: 28px; margin-bottom: 8px; }
+.dz-text { font-size: 14px; color: var(--text2); margin-bottom: 4px; }
+.dz-sub { font-size: 12px; color: var(--text3); }
+
+.file-preview {
+  display: none; margin-top: 12px; padding: 10px 12px;
+  background: var(--bg2); border-radius: 7px; border: 1px solid var(--border);
+  font-size: 13px; color: var(--text2);
+}
+
+.modal-footer { display: flex; gap: 9px; margin-top: 18px; }
+.modal-footer .btn { flex: 1; justify-content: center; padding: 9px; }
+
+/* ── Processing indicator ─────────────────────────────────── */
+.processing-card {
+  display: none;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 24px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+.processing-card.show { display: block; }
+
+.spinner {
+  width: 32px; height: 32px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.step-list { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; text-align: left; }
+.step-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text3); }
+.step-item.done { color: var(--green); }
+.step-item.active { color: var(--text); font-weight: 500; }
+.step-check { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 9px; }
+.step-item.done .step-check { background: var(--green); border-color: var(--green); color: white; }
+.step-item.active .step-check { border-color: var(--accent); }
+
+/* ── Progress bar ─────────────────────────────────────────── */
+.progress-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin: 10px 0; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; }
+
+/* ── Empty state ──────────────────────────────────────────── */
+.empty-state {
+  text-align: center; padding: 48px 20px;
+  color: var(--text3);
+}
+.es-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
+.es-title { font-size: 15px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+.es-sub { font-size: 13px; color: var(--text3); }
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.tab-btn {
+  padding: 9px 16px;
+  font-size: 13.5px; font-weight: 450;
+  color: var(--text3); cursor: pointer;
+  border: none; background: none;
+  font-family: var(--font);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.12s;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent-dark); border-bottom-color: var(--accent); font-weight: 500; }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; animation: fadeIn 0.15s ease; }
+
+/* ── Notification ─────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  padding: 12px 16px;
+  background: var(--text); color: white;
+  border-radius: 8px;
+  font-size: 13px;
+  box-shadow: var(--shadow2);
+  z-index: 500;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* ── Scrollbar ────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ── Utility ──────────────────────────────────────────────── */
+.flex { display: flex; }
+.flex-1 { flex: 1; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.mt-1 { margin-top: 4px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.mb-4 { margin-bottom: 16px; }
+.mb-5 { margin-bottom: 20px; }
+.text-sm { font-size: 12.5px; }
+.text-xs { font-size: 11px; }
+.text-muted { color: var(--text3); }
+.font-mono { font-family: var(--font-mono); }
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- UPLOAD MODAL -->
+<div class="modal-backdrop" id="uploadModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('uploadModal')">✕</button>
+    <div class="modal-title">Upload Health Record</div>
+    <div class="modal-sub">Supports PDFs, scans, images, and handwritten notes — AI extracts and structures the data</div>
+    <div class="drop-zone-big" onclick="document.getElementById('fileInput').click()"
+         ondragover="this.classList.add('drag-active');event.preventDefault()"
+         ondragleave="this.classList.remove('drag-active')"
+         ondrop="handleModalDrop(event,this)">
+      <div class="dz-icon">📄</div>
+      <div class="dz-text">Drag & drop your file here, or click to browse</div>
+      <div class="dz-sub">PDF · JPG · PNG · TIFF · Max 20MB</div>
+    </div>
+    <input type="file" id="fileInput" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.tiff" onchange="handleFileSelect(this)">
+    <div class="file-preview" id="filePrev"></div>
+    <div class="form-group mt-3">
+      <label class="form-label">Record type</label>
+      <select class="form-select" id="recordType">
+        <option>Lab Report</option>
+        <option>Prescription</option>
+        <option>Discharge Summary</option>
+        <option>Scan / X-Ray / MRI</option>
+        <option>ECG Report</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('uploadModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="startProcessing()">Analyze with AI</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHELL -->
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <div class="wordmark">
+        <div class="wm-icon">
+          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <span class="wm-name">MedInsight</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-label">Overview</div>
+        <button class="nav-link active" onclick="showPage('dashboard',this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 000 2h14a1 1 0 000-2H3zm0 4a1 1 0 000 2h14a1 1 0 000-2H3zm0 4a1 1 0 000 2h7a1 1 0 000-2H3z"/></svg>
+          Dashboard
+        </button>
+        <button class="nav-link" onclick="showPage('records',this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/></svg>
+          My Records
+          <span class="nav-badge">8</span>
+        </button>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Intelligence</div>
+        <button class="nav-link" onclick="showPage('translator',this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.388c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-3.754 1 1 0 111.934-.516 16.964 16.964 0 001.342 3.39 20.921 20.921 0 001.17-3.463H3a1 1 0 110-2h3V3a1 1 0 011-1zm9 10a1 1 0 01.894.553l2.991 5.927a.75.75 0 01-1.342.67L19.548 18h-5.096l-.985 1.95a.75.75 0 01-1.342-.67l2.99-5.927A1 1 0 0116 12zm-1.382 4h2.764L16 13.236 14.618 16z"/></svg>
+          Report Translator
+          <span class="nav-badge amber">3</span>
+        </button>
+        <button class="nav-link" onclick="showPage('correlations',this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+          Correlations
+        </button>
+        <button class="nav-link" onclick="showPage('alerts',this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zm0 16a2 2 0 002-2H8a2 2 0 002 2z"/></svg>
+          Alerts
+          <span class="nav-badge">3</span>
+        </button>
+        <button class="nav-link" onclick="showPage('medications',this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
+          Medications
+        </button>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Access</div>
+        <button class="nav-link" onclick="showPage('profile',this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+          Health Profile
+        </button>
+        <button class="nav-link" onclick="showPage('consent',this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+          Consent & Access
+        </button>
+        <button class="nav-link" onclick="showPage('share',this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"/></svg>
+          Share Records
+        </button>
+        <button class="nav-link" onclick="showPage('emergency',this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/></svg>
+          Emergency QR
+        </button>
+      </div>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-row">
+        <div class="avatar">SR</div>
+        <div class="user-meta">
+          <div class="uname">Sandeep Reddy</div>
+          <div class="usub">ABHA · 1234-5678-9012</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <span class="topbar-title" id="topbarTitle">Dashboard</span>
+      <div class="topbar-sep"></div>
+      <span class="topbar-sub" id="topbarSub">Your health at a glance</span>
+      <div class="topbar-right">
+        <div class="abha-status">
+          <div class="status-dot"></div>
+          ABHA Connected
+        </div>
+        <button class="btn btn-primary" onclick="openModal('uploadModal')">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+          Upload Record
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ DASHBOARD ═══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div class="page-title">Good morning, Sandeep</div>
+        <div class="page-sub">Here's a summary of your health records and recent insights</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="dash-grid-top">
+        <div class="stat-card">
+          <div class="stat-label">Total Records</div>
+          <div class="stat-value" id="cnt1">0</div>
+          <div class="stat-delta delta-up mt-1">↑ 3 added this month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Hospitals Linked</div>
+          <div class="stat-value" id="cnt2">0</div>
+          <div class="stat-delta delta-neu mt-1">via ABDM FHIR</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Active Alerts</div>
+          <div class="stat-value" id="cnt3">0</div>
+          <div class="stat-delta delta-down mt-1">2 need attention</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Current Medications</div>
+          <div class="stat-value" id="cnt4">0</div>
+          <div class="stat-delta delta-up mt-1">No conflicts found</div>
+        </div>
+      </div>
+
+      <!-- Main grid -->
+      <div class="dash-grid-main">
+        <!-- Left: recent records -->
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Recent Records</div>
+              <div class="card-sub">Your latest health documents</div>
+            </div>
+            <button class="btn" onclick="showPage('records',null)">View all</button>
+          </div>
+          <div class="timeline">
+            <div class="tl-item" onclick="openReport('lipid')">
+              <div class="tl-icon ti-lab">🧪</div>
+              <div class="tl-body">
+                <div class="tl-name">HbA1c & Lipid Panel</div>
+                <div class="tl-meta">Thyrocare · Apollo Hyderabad</div>
+              </div>
+              <div class="tl-right">
+                <div class="tl-date">14 Mar 2026</div>
+                <span class="badge b-green">Analyzed</span>
+              </div>
+            </div>
+            <div class="tl-item" onclick="openReport('rx')">
+              <div class="tl-icon ti-rx">💊</div>
+              <div class="tl-body">
+                <div class="tl-name">Dr. Sharma Prescription</div>
+                <div class="tl-meta">Atorvastatin · Metformin · Ramipril</div>
+              </div>
+              <div class="tl-right">
+                <div class="tl-date">10 Mar 2026</div>
+                <span class="badge b-green">Analyzed</span>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-icon ti-scan">🩻</div>
+              <div class="tl-body">
+                <div class="tl-name">Chest X-Ray</div>
+                <div class="tl-meta">Yashoda Hospital · Radiology Dept</div>
+              </div>
+              <div class="tl-right">
+                <div class="tl-date">8 Mar 2026</div>
+                <span class="badge b-green">Analyzed</span>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-icon ti-note">📄</div>
+              <div class="tl-body">
+                <div class="tl-name">Discharge Summary</div>
+                <div class="tl-meta">CARE Hospitals · 3-day admission</div>
+              </div>
+              <div class="tl-right">
+                <div class="tl-date">2 Feb 2026</div>
+                <span class="badge b-amber">Processing</span>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-icon ti-ecg">❤️</div>
+              <div class="tl-body">
+                <div class="tl-name">ECG Report</div>
+                <div class="tl-meta">Cardiology OPD · Normal sinus rhythm</div>
+              </div>
+              <div class="tl-right">
+                <div class="tl-date">18 Jan 2026</div>
+                <span class="badge b-green">Analyzed</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: AI insights -->
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">AI Insights</div>
+              <div class="card-sub">Patterns detected across your records</div>
+            </div>
+          </div>
+          <div class="insight-list">
+            <div class="insight-card">
+              <div class="insight-head"><div class="insight-pip pip-green"></div><div class="insight-title">Cholesterol improved significantly after statin</div></div>
+              <div class="insight-body">LDL dropped from 138 → 98 mg/dL (−28%) within 90 days of Atorvastatin. Strong response.</div>
+              <div class="insight-tag">CORRELATION · 90-day window</div>
+            </div>
+            <div class="insight-card">
+              <div class="insight-head"><div class="insight-pip pip-amber"></div><div class="insight-title">HbA1c trending upward — pre-diabetic range</div></div>
+              <div class="insight-body">3 consecutive readings rising over 6 months. Now at 6.2%. ICMR guidelines suggest lifestyle review.</div>
+              <div class="insight-tag">ALERT · ICMR 2024 Guideline</div>
+            </div>
+            <div class="insight-card">
+              <div class="insight-head"><div class="insight-pip pip-blue"></div><div class="insight-title">Duplicate test detected</div></div>
+              <div class="insight-body">HbA1c ordered by two different doctors within 12 days. Sharing your record could save ₹800+.</div>
+              <div class="insight-tag">DUPLICATE · Cost saving</div>
+            </div>
+            <div class="insight-card">
+              <div class="insight-head"><div class="insight-pip pip-red"></div><div class="insight-title">Overdue: Kidney function test</div></div>
+              <div class="insight-body">On Metformin for 8 months. ICMR recommends creatinine + eGFR every 6 months. Last done 9 months ago.</div>
+              <div class="insight-tag">CARE GAP · Schedule soon</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload -->
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Upload Documents</div>
+            <div class="card-sub">Any medical file — AI extracts and structures everything automatically</div>
+          </div>
+        </div>
+        <div class="upload-grid">
+          <div class="upload-zone"
+               ondragover="this.classList.add('drag-active');event.preventDefault()"
+               ondragleave="this.classList.remove('drag-active')"
+               ondrop="this.classList.remove('drag-active');event.preventDefault();openModal('uploadModal')"
+               onclick="openModal('uploadModal')">
+            <div class="uz-icon uzi-blue">💊</div>
+            <div class="uz-title">Prescription</div>
+            <div class="uz-desc">Upload handwritten or printed prescriptions for medication extraction and conflict checking</div>
+            <div class="uz-formats">JPG · PNG · PDF · Handwritten OK</div>
+            <button class="uz-btn uzb-blue" onclick="event.stopPropagation();openModal('uploadModal')">Upload Prescription</button>
+          </div>
+          <div class="upload-zone"
+               ondragover="this.classList.add('drag-active');event.preventDefault()"
+               ondragleave="this.classList.remove('drag-active')"
+               ondrop="this.classList.remove('drag-active');event.preventDefault();openModal('uploadModal')"
+               onclick="openModal('uploadModal')">
+            <div class="uz-icon uzi-green">🧪</div>
+            <div class="uz-title">Lab Report</div>
+            <div class="uz-desc">Blood tests, urine reports, and diagnostic panels — converted to structured FHIR data automatically</div>
+            <div class="uz-formats">JPG · PNG · PDF · Scanned reports</div>
+            <button class="uz-btn uzb-green" onclick="event.stopPropagation();openModal('uploadModal')">Upload Lab Report</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════════════════════════════════════════════════ RECORDS ═══ -->
+    <div class="page" id="page-records">
+      <div class="page-header">
+        <div class="page-title">My Records</div>
+        <div class="page-sub">All your medical documents in one place, structured and searchable</div>
+      </div>
+
+      <!-- Processing card (shows during upload simulation) -->
+      <div class="processing-card" id="processingCard">
+        <div class="spinner"></div>
+        <div style="font-size:15px;font-weight:500;color:var(--text);margin-bottom:4px">Analyzing your document</div>
+        <div style="font-size:13px;color:var(--text3)">Our AI is extracting and structuring the medical data</div>
+        <div class="progress-bar" style="margin-top:12px"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        <div class="step-list">
+          <div class="step-item" id="step1"><div class="step-check">1</div> OCR text extraction</div>
+          <div class="step-item" id="step2"><div class="step-check">2</div> Clinical entity recognition</div>
+          <div class="step-item" id="step3"><div class="step-check">3</div> FHIR resource mapping</div>
+          <div class="step-item" id="step4"><div class="step-check">4</div> AI correlation analysis</div>
+        </div>
+      </div>
+
+      <!-- Report viewer (shown when record is opened) -->
+      <div class="report-view" id="reportView">
+        <div class="report-header">
+          <div class="rh-icon ti-lab">🧪</div>
+          <div style="flex:1">
+            <div class="rh-title" id="rvTitle">HbA1c & Lipid Panel</div>
+            <div class="rh-meta">
+              <span>📍 <span id="rvSource">Thyrocare · Apollo Hyderabad</span></span>
+              <span>📅 <span id="rvDate" class="font-mono">14 Mar 2026</span></span>
+              <span id="rvBadge"><span class="badge b-green">Analyzed</span></span>
+            </div>
+          </div>
+          <div class="rh-actions">
+            <button class="btn" onclick="showToast('Report downloaded as PDF')">Download</button>
+            <button class="btn" onclick="showPage('share',null)">Share</button>
+            <button class="btn" onclick="closeReport()">✕ Close</button>
+          </div>
+        </div>
+        <div class="report-grid">
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title">Lab Values</div>
+            </div>
+            <div class="lab-grid">
+              <div class="lab-row">
+                <div class="lab-name">HbA1c<div class="lab-sub">Glycated Hemoglobin</div></div>
+                <div class="lab-bar-wrap"><div class="lab-bar lb-warn" style="width:62%"></div></div>
+                <div class="lab-val lv-warn">6.2%</div>
+                <span class="badge b-amber">High</span>
+              </div>
+              <div class="lab-row">
+                <div class="lab-name">LDL Cholesterol<div class="lab-sub">Low-density lipoprotein</div></div>
+                <div class="lab-bar-wrap"><div class="lab-bar lb-ok" style="width:49%"></div></div>
+                <div class="lab-val lv-ok">98 mg/dL</div>
+                <span class="badge b-green">Normal</span>
+              </div>
+              <div class="lab-row">
+                <div class="lab-name">HDL Cholesterol<div class="lab-sub">High-density lipoprotein</div></div>
+                <div class="lab-bar-wrap"><div class="lab-bar lb-ok" style="width:70%"></div></div>
+                <div class="lab-val lv-ok">52 mg/dL</div>
+                <span class="badge b-green">Normal</span>
+              </div>
+              <div class="lab-row">
+                <div class="lab-name">Triglycerides<div class="lab-sub"></div></div>
+                <div class="lab-bar-wrap"><div class="lab-bar lb-ok" style="width:55%"></div></div>
+                <div class="lab-val lv-ok">142 mg/dL</div>
+                <span class="badge b-green">Normal</span>
+              </div>
+              <div class="lab-row">
+                <div class="lab-name">Fasting Blood Sugar<div class="lab-sub"></div></div>
+                <div class="lab-bar-wrap"><div class="lab-bar lb-warn" style="width:58%"></div></div>
+                <div class="lab-val lv-warn">108 mg/dL</div>
+                <span class="badge b-amber">Borderline</span>
+              </div>
+              <div class="lab-row">
+                <div class="lab-name">Serum Creatinine<div class="lab-sub">Kidney function</div></div>
+                <div class="lab-bar-wrap"><div class="lab-bar lb-ok" style="width:45%"></div></div>
+                <div class="lab-val lv-ok">0.9 mg/dL</div>
+                <span class="badge b-green">Normal</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="translation-box mb-4">
+              <div class="tb-head"><div class="tb-icon">✦</div><div class="tb-label">Plain Language Explanation</div></div>
+              <div class="tb-text">Your cholesterol is now in the healthy range — the statin medication (Atorvastatin) is working well. Your blood sugar control needs attention; the HbA1c of 6.2% means your average blood sugar has been slightly elevated over the past 3 months.</div>
+              <div class="divider"></div>
+              <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Action Items</div>
+              <div class="action-items">
+                <div class="action-item">Continue Atorvastatin — cholesterol is responding well</div>
+                <div class="action-item">Reduce refined carbohydrates and sugary drinks to help lower HbA1c</div>
+                <div class="action-item">Schedule kidney function test (overdue by 3 months while on Metformin)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Records table -->
+      <div class="card" id="recordsTableCard">
+        <div class="card-head">
+          <div>
+            <div class="card-title">All Records</div>
+            <div class="card-sub">8 records from 5 providers</div>
+          </div>
+          <div class="flex gap-2">
+            <select class="form-select" style="width:auto;font-size:12.5px;padding:5px 10px">
+              <option>All types</option>
+              <option>Lab Report</option>
+              <option>Prescription</option>
+              <option>Scan</option>
+            </select>
+            <button class="btn btn-primary" onclick="openModal('uploadModal')">Upload</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Record Name</th>
+                <th>Provider</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr onclick="openReport('lipid')"><td><span class="badge b-blue">Lab Report</span></td><td><div class="rec-name">HbA1c & Lipid Panel</div><div class="rec-src">Thyrocare</div></td><td>Apollo Hyderabad</td><td class="font-mono" style="font-size:12.5px">14 Mar 2026</td><td><span class="badge b-green">Analyzed</span></td><td><button class="action-btn">View →</button></td></tr>
+              <tr onclick="openReport('rx')"><td><span class="badge b-green">Prescription</span></td><td><div class="rec-name">Dr. Sharma Prescription</div><div class="rec-src">Handwritten · 3 medications</div></td><td>Apollo Hyderabad</td><td class="font-mono" style="font-size:12.5px">10 Mar 2026</td><td><span class="badge b-green">Analyzed</span></td><td><button class="action-btn">View →</button></td></tr>
+              <tr><td><span class="badge b-amber" style="background:var(--amber-light);color:var(--amber)">Scan</span></td><td><div class="rec-name">Chest X-Ray</div><div class="rec-src">DICOM · Radiology</div></td><td>Yashoda Hospital</td><td class="font-mono" style="font-size:12.5px">08 Mar 2026</td><td><span class="badge b-green">Analyzed</span></td><td><button class="action-btn">View →</button></td></tr>
+              <tr><td><span class="badge b-gray">Discharge</span></td><td><div class="rec-name">Discharge Summary</div><div class="rec-src">3-day admission · PDF</div></td><td>CARE Hospitals</td><td class="font-mono" style="font-size:12.5px">02 Feb 2026</td><td><span class="badge b-amber">Processing</span></td><td><button class="action-btn">View →</button></td></tr>
+              <tr><td><span class="badge b-red" style="background:var(--red-light);color:var(--red)">ECG</span></td><td><div class="rec-name">ECG Report</div><div class="rec-src">Normal sinus rhythm</div></td><td>Cardiology OPD</td><td class="font-mono" style="font-size:12.5px">18 Jan 2026</td><td><span class="badge b-green">Analyzed</span></td><td><button class="action-btn">View →</button></td></tr>
+              <tr><td><span class="badge b-blue">Lab Report</span></td><td><div class="rec-name">Complete Blood Count</div><div class="rec-src">SRL Diagnostics</div></td><td>CARE Hospitals</td><td class="font-mono" style="font-size:12.5px">15 Dec 2025</td><td><span class="badge b-green">Analyzed</span></td><td><button class="action-btn">View →</button></td></tr>
+              <tr><td><span class="badge b-green">Prescription</span></td><td><div class="rec-name">Dr. Reddy Prescription</div><div class="rec-src">Ramipril 5mg added</div></td><td>Yashoda Hospital</td><td class="font-mono" style="font-size:12.5px">10 Nov 2025</td><td><span class="badge b-green">Analyzed</span></td><td><button class="action-btn">View →</button></td></tr>
+              <tr><td><span class="badge b-blue">Lab Report</span></td><td><div class="rec-name">Thyroid Panel (TSH, T3, T4)</div><div class="rec-src">Thyrocare</div></td><td>Apollo Hyderabad</td><td class="font-mono" style="font-size:12.5px">28 Sep 2025</td><td><span class="badge b-green">Analyzed</span></td><td><button class="action-btn">View →</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════ REPORT TRANSLATOR ═══ -->
+    <div class="page" id="page-translator">
+      <div class="page-header">
+        <div class="page-title">Report Translator</div>
+        <div class="page-sub">Complex medical reports explained in plain language — Hindi and English</div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab(this,'tab-translated')">Translated Reports</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-hindi')">हिंदी में देखें</button>
+      </div>
+
+      <div class="tab-panel active" id="tab-translated">
+        <div class="card mb-5">
+          <div class="card-head">
+            <div>
+              <div class="card-title">HbA1c & Lipid Panel — Plain English</div>
+              <div class="card-sub">Translated on 14 Mar 2026</div>
+            </div>
+            <button class="btn" onclick="showToast('Shared with doctor')">Share with Doctor</button>
+          </div>
+          <div class="translation-box mb-5">
+            <div class="tb-head"><div class="tb-icon">✦</div><div class="tb-label">What your report means</div></div>
+            <div class="tb-text">
+              Your <strong>blood sugar control</strong> (HbA1c 6.2%) has been slightly higher than normal over the last 3 months. This puts you in the "pre-diabetic" zone — not diabetic yet, but your doctor will want to watch this closely.<br><br>
+              The <strong>good news</strong>: Your cholesterol has improved significantly. Your LDL (bad cholesterol) has dropped from 138 to 98 mg/dL after starting Atorvastatin — that's a 28% reduction, which is a great response to the medication.
+            </div>
+            <div class="divider"></div>
+            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Your Action Items</div>
+            <div class="action-items">
+              <div class="action-item">Continue Atorvastatin — your cholesterol is responding well</div>
+              <div class="action-item">Reduce white rice, bread, and sugary drinks to help lower your HbA1c</div>
+              <div class="action-item">Schedule a kidney function test — it's overdue while on Metformin</div>
+              <div class="action-item">Follow up with your doctor in 3 months to recheck HbA1c</div>
+            </div>
+          </div>
+
+          <div class="card-head">
+            <div class="card-title">Dr. Sharma Prescription — Plain English</div>
+          </div>
+          <div class="translation-box">
+            <div class="tb-head"><div class="tb-icon">✦</div><div class="tb-label">What these medications do</div></div>
+            <div class="tb-text">
+              You have been prescribed 3 medications:<br><br>
+              <strong>Atorvastatin 40mg</strong> (Lipitor) — Taken at night. Lowers cholesterol. Take with or without food.<br><br>
+              <strong>Metformin 500mg</strong> — Taken with meals twice a day. Helps control blood sugar. May cause mild stomach upset initially.<br><br>
+              <strong>Ramipril 5mg</strong> — Taken in the morning. Lowers blood pressure and protects kidneys.
+            </div>
+            <div class="divider"></div>
+            <div class="action-items">
+              <div class="action-item">Take Metformin with food — reduces stomach side effects</div>
+              <div class="action-item">Do not stop Atorvastatin without asking your doctor</div>
+              <div class="action-item">Monitor blood pressure weekly while starting Ramipril</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-hindi">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">HbA1c & Lipid Panel — हिंदी में</div>
+          </div>
+          <div class="translation-box">
+            <div class="tb-head"><div class="tb-icon">✦</div><div class="tb-label">आपकी रिपोर्ट का मतलब</div></div>
+            <div class="tb-text" style="line-height:1.9">
+              आपका <strong>HbA1c (6.2%)</strong> थोड़ा अधिक है। इसका मतलब है कि पिछले 3 महीनों में आपका ब्लड शुगर सामान्य से थोड़ा ज़्यादा रहा है। आप अभी "प्री-डायबिटिक" ज़ोन में हैं — यानी डायबिटीज़ नहीं है, लेकिन ध्यान देना ज़रूरी है।<br><br>
+              <strong>अच्छी खबर:</strong> आपका कोलेस्ट्रॉल (LDL) Atorvastatin लेने के बाद 138 से 98 हो गया है — यह 28% की कमी है और बहुत अच्छा संकेत है।
+            </div>
+            <div class="divider"></div>
+            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">आपको क्या करना चाहिए</div>
+            <div class="action-items">
+              <div class="action-item">Atorvastatin लेना जारी रखें — कोलेस्ट्रॉल अच्छा हो रहा है</div>
+              <div class="action-item">चावल, मैदा और मीठे पेय पदार्थ कम करें</div>
+              <div class="action-item">3 महीने बाद फिर से HbA1c जांच कराएं</div>
+              <div class="action-item">किडनी फंक्शन टेस्ट करवाएं — Metformin के साथ ज़रूरी है</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ CORRELATIONS ═══ -->
+    <div class="page" id="page-correlations">
+      <div class="page-header">
+        <div class="page-title">Data Correlations</div>
+        <div class="page-sub">Patterns found across your labs, medications, and clinical notes</div>
+      </div>
+      <div class="corr-list">
+        <div class="corr-card">
+          <div class="corr-icon ti-lab" style="background:var(--green-light)">📉</div>
+          <div class="corr-body">
+            <div class="corr-title">LDL Cholesterol improved after starting Atorvastatin</div>
+            <div class="corr-desc">Atorvastatin 40mg was prescribed on 20 Dec 2025. LDL measured in Mar 2026 shows 28% reduction. Strong therapeutic response within 90 days.</div>
+            <div class="corr-tag">MEDICATION EFFECT · Confidence: 94% · 90-day window</div>
+          </div>
+          <div class="corr-delta" style="color:var(--green)"><div class="cd-val">−28%</div><div class="cd-label">LDL reduction</div></div>
+        </div>
+        <div class="corr-card">
+          <div class="corr-icon" style="background:var(--amber-light)">📈</div>
+          <div class="corr-body">
+            <div class="corr-title">HbA1c progressively rising over 6 months</div>
+            <div class="corr-desc">Readings: Sep 25 (5.8%) → Dec 25 (6.0%) → Mar 26 (6.2%). Consistent upward trend despite Metformin. May need dosage adjustment.</div>
+            <div class="corr-tag">LAB TREND · 3 data points · ICMR threshold: 6.5%</div>
+          </div>
+          <div class="corr-delta" style="color:var(--amber)"><div class="cd-val">+0.4%</div><div class="cd-label">6-month rise</div></div>
+        </div>
+        <div class="corr-card">
+          <div class="corr-icon ti-ecg" style="background:var(--red-light)">🔁</div>
+          <div class="corr-body">
+            <div class="corr-title">HbA1c test duplicated across two providers</div>
+            <div class="corr-desc">Apollo Hyderabad ordered HbA1c on 14 Mar 2026. Yashoda Hospital ordered the same test on 26 Mar 2026. Both within 12 days. Sharing records could eliminate this.</div>
+            <div class="corr-tag">DUPLICATE DETECTION · Estimated saving: ₹800</div>
+          </div>
+          <div class="corr-delta" style="color:var(--red)"><div class="cd-val">₹800</div><div class="cd-label">potential saving</div></div>
+        </div>
+        <div class="corr-card">
+          <div class="corr-icon ti-rx" style="background:var(--blue-light)">⚠️</div>
+          <div class="corr-body">
+            <div class="corr-title">Blood pressure trending down with Ramipril + lifestyle changes</div>
+            <div class="corr-desc">Average BP reduced from 142/90 to 124/82 over 3 months on Ramipril 5mg. Positive correlation with reduced sodium intake noted in clinical notes.</div>
+            <div class="corr-tag">MEDICATION EFFECT · Confidence: 87% · BP trend</div>
+          </div>
+          <div class="corr-delta" style="color:var(--green)"><div class="cd-val">−18pt</div><div class="cd-label">SBP reduction</div></div>
+        </div>
+        <div class="corr-card">
+          <div class="corr-icon" style="background:var(--bg2)">🦷</div>
+          <div class="corr-body">
+            <div class="corr-title">Kidney function overdue — Metformin safety protocol</div>
+            <div class="corr-desc">Patient has been on Metformin for 8 months. ICMR recommends creatinine + eGFR every 6 months. Last test: 9 months ago. eGFR should be confirmed before continuing.</div>
+            <div class="corr-tag">CARE GAP · ICMR Diabetes Guidelines 2024</div>
+          </div>
+          <div class="corr-delta" style="color:var(--amber)"><div class="cd-val">9 mo</div><div class="cd-label">overdue</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ ALERTS ═══ -->
+    <div class="page" id="page-alerts">
+      <div class="page-header">
+        <div class="page-title">Health Alerts</div>
+        <div class="page-sub">Guideline-based notifications and critical care reminders</div>
+      </div>
+      <div class="alerts-list">
+        <div class="alert-card severity-amber">
+          <div class="alert-icon">⚠️</div>
+          <div class="alert-body">
+            <div class="alert-title">HbA1c in pre-diabetic range — action recommended</div>
+            <div class="alert-desc">Your HbA1c of 6.2% puts you in the pre-diabetic range (5.7–6.4%). Three consecutive readings show an upward trend. ICMR 2024 guidelines recommend dietary counselling and 3-monthly monitoring.</div>
+            <div class="alert-source">Source: ICMR Clinical Practice Guidelines for Diabetes 2024 · Section 3.2</div>
+            <div class="alert-actions">
+              <button class="btn" onclick="showToast('Reminder set for 3 months')">Set Reminder</button>
+              <button class="btn" onclick="showPage('translator',null)">View Explanation</button>
+            </div>
+          </div>
+          <span class="badge b-amber">Medium</span>
+        </div>
+        <div class="alert-card severity-high">
+          <div class="alert-icon">🔴</div>
+          <div class="alert-body">
+            <div class="alert-title">Kidney function test overdue — safety critical</div>
+            <div class="alert-desc">You have been on Metformin 500mg for 8 months. ICMR protocol mandates creatinine + eGFR testing every 6 months. Your last test was 9 months ago. Continuing Metformin without renal monitoring is not recommended.</div>
+            <div class="alert-source">Source: ICMR Guidelines · WHO Essential Medicines Safety Protocol</div>
+            <div class="alert-actions">
+              <button class="btn btn-primary" onclick="showToast('Booking link sent to your phone')">Book Test Now</button>
+              <button class="btn">Dismiss</button>
+            </div>
+          </div>
+          <span class="badge b-red">High</span>
+        </div>
+        <div class="alert-card severity-low">
+          <div class="alert-icon">ℹ️</div>
+          <div class="alert-body">
+            <div class="alert-title">Duplicate HbA1c test detected — share records first</div>
+            <div class="alert-desc">Apollo Hyderabad and Yashoda Hospital both ordered HbA1c within 12 days. Before your next lab visit, share your existing reports with the requesting doctor. This could save ₹800 and prevent unnecessary needlesticks.</div>
+            <div class="alert-source">Detected by: MedInsight Duplicate Detection Engine</div>
+            <div class="alert-actions">
+              <button class="btn" onclick="showPage('share',null)">Share Records</button>
+              <button class="btn" onclick="showToast('Alert dismissed')">Dismiss</button>
+            </div>
+          </div>
+          <span class="badge b-blue">Info</span>
+        </div>
+        <div class="alert-card severity-ok">
+          <div class="alert-icon">✅</div>
+          <div class="alert-body">
+            <div class="alert-title">Cholesterol goal achieved — keep it up</div>
+            <div class="alert-desc">Your LDL cholesterol has reached the target range (< 100 mg/dL) for the first time. Continue Atorvastatin 40mg and low-fat diet. Next lipid panel recommended in 6 months.</div>
+            <div class="alert-source">Target per ACC/AHA Guidelines for moderate cardiovascular risk</div>
+          </div>
+          <span class="badge b-green">Good</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ MEDICATIONS ═══ -->
+    <div class="page" id="page-medications">
+      <div class="page-header">
+        <div class="page-title">Medications</div>
+        <div class="page-sub">All current and past medications extracted from your prescriptions</div>
+      </div>
+      <div class="card mb-4">
+        <div class="card-head">
+          <div class="card-title">Current Medications</div>
+          <span class="badge b-green">No conflicts detected</span>
+        </div>
+        <table>
+          <thead><tr><th>Medication</th><th>Generic Name</th><th>Dose</th><th>Frequency</th><th>Since</th><th>Prescribed By</th></tr></thead>
+          <tbody>
+            <tr><td><div class="rec-name">Atorvastatin</div><div class="rec-src">Lipitor · Cholesterol</div></td><td class="font-mono" style="font-size:12px">Atorvastatin</td><td>40mg</td><td>Once at night</td><td class="font-mono" style="font-size:12px">20 Dec 2025</td><td>Dr. Sharma</td></tr>
+            <tr><td><div class="rec-name">Metformin</div><div class="rec-src">Glucophage · Diabetes</div></td><td class="font-mono" style="font-size:12px">Metformin HCl</td><td>500mg</td><td>Twice with meals</td><td class="font-mono" style="font-size:12px">10 Aug 2025</td><td>Dr. Sharma</td></tr>
+            <tr><td><div class="rec-name">Ramipril</div><div class="rec-src">Altace · Blood pressure</div></td><td class="font-mono" style="font-size:12px">Ramipril</td><td>5mg</td><td>Once in morning</td><td class="font-mono" style="font-size:12px">10 Nov 2025</td><td>Dr. Reddy</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Drug Interaction Check</div></div>
+        <div class="insight-card" style="margin-bottom:8px">
+          <div class="insight-head"><div class="insight-pip pip-green"></div><div class="insight-title">Atorvastatin + Metformin — No significant interaction</div></div>
+          <div class="insight-body">These two medications are commonly prescribed together for metabolic syndrome. No dose adjustment needed.</div>
+        </div>
+        <div class="insight-card" style="margin-bottom:8px">
+          <div class="insight-head"><div class="insight-pip pip-green"></div><div class="insight-title">Ramipril + Metformin — Monitor kidney function</div></div>
+          <div class="insight-body">Both drugs affect kidney handling. This is safe but reinforces the recommendation to check creatinine/eGFR regularly while on both.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ HEALTH PROFILE ═══ -->
+    <div class="page" id="page-profile">
+      <div class="page-header">
+        <div class="page-title">Health Profile</div>
+        <div class="page-sub">Your complete health summary, always up to date</div>
+      </div>
+      <div class="profile-grid">
+        <div>
+          <div class="profile-card">
+            <div class="profile-hero">
+              <div class="pa-avatar">SR</div>
+              <div class="pa-name">Sandeep Reddy</div>
+              <div class="pa-sub">ABHA · 1234-5678-9012</div>
+            </div>
+            <div class="profile-meta">
+              <div class="meta-row"><span class="meta-key">Age</span><span class="meta-val">22 years</span></div>
+              <div class="meta-row"><span class="meta-key">Blood Group</span><span class="meta-val">B+</span></div>
+              <div class="meta-row"><span class="meta-key">Height</span><span class="meta-val">5'9" (175cm)</span></div>
+              <div class="meta-row"><span class="meta-key">Weight</span><span class="meta-val">72 kg</span></div>
+              <div class="meta-row"><span class="meta-key">BMI</span><span class="meta-val">23.5 — Normal</span></div>
+              <div class="meta-row"><span class="meta-key">Allergies</span><span class="meta-val">Penicillin</span></div>
+              <div class="meta-row"><span class="meta-key">Conditions</span><span class="meta-val">Pre-diabetes, Hypertension</span></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="vitals-grid">
+            <div class="vital-card">
+              <div class="vc-label">Blood Pressure</div>
+              <div class="vc-val">118/76</div>
+              <div class="vc-unit">mmHg</div>
+              <div class="vc-status"><span class="badge b-green">Normal</span></div>
+            </div>
+            <div class="vital-card">
+              <div class="vc-label">HbA1c</div>
+              <div class="vc-val">6.2%</div>
+              <div class="vc-unit">3-month average</div>
+              <div class="vc-status"><span class="badge b-amber">Pre-diabetic</span></div>
+            </div>
+            <div class="vital-card">
+              <div class="vc-label">LDL Cholesterol</div>
+              <div class="vc-val">98 mg/dL</div>
+              <div class="vc-unit">Last: 14 Mar 2026</div>
+              <div class="vc-status"><span class="badge b-green">In target range</span></div>
+            </div>
+            <div class="vital-card">
+              <div class="vc-label">eGFR</div>
+              <div class="vc-val">87</div>
+              <div class="vc-unit">mL/min/1.73m²</div>
+              <div class="vc-status"><span class="badge b-green">Good function</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div class="card-title">Conditions & History</div></div>
+            <div class="corr-list">
+              <div class="corr-card" style="padding:12px 14px">
+                <div class="corr-icon ti-rx" style="width:30px;height:30px;font-size:13px">🩺</div>
+                <div class="corr-body">
+                  <div class="corr-title" style="font-size:13px">Pre-diabetes (ICD: E09)</div>
+                  <div class="corr-desc" style="font-size:11.5px">Diagnosed Aug 2025 · Under active monitoring</div>
+                </div>
+                <span class="badge b-amber">Active</span>
+              </div>
+              <div class="corr-card" style="padding:12px 14px">
+                <div class="corr-icon ti-ecg" style="width:30px;height:30px;font-size:13px">❤️</div>
+                <div class="corr-body">
+                  <div class="corr-title" style="font-size:13px">Hypertension Stage 1 (ICD: I10)</div>
+                  <div class="corr-desc" style="font-size:11.5px">Diagnosed Nov 2025 · Controlled on Ramipril</div>
+                </div>
+                <span class="badge b-green">Controlled</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ CONSENT ═══ -->
+    <div class="page" id="page-consent">
+      <div class="page-header">
+        <div class="page-title">Consent & Access</div>
+        <div class="page-sub">Control who can access your records and for how long</div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-head">
+          <div>
+            <div class="card-title">ABHA Linked Providers</div>
+            <div class="card-sub">Hospitals with permission to share records via ABDM FHIR</div>
+          </div>
+          <button class="btn btn-primary" onclick="showToast('ABDM consent flow initiated')">+ Link Provider</button>
+        </div>
+        <div class="consent-list">
+          <div class="consent-card">
+            <div class="cc-icon">🏥</div>
+            <div class="cc-body">
+              <div class="cc-name">Apollo Hospitals, Hyderabad</div>
+              <div class="cc-meta">HIP ID: APOLLO-HYD-001 · 12 records shared · Last pull: 14 Mar 2026</div>
+            </div>
+            <div class="cc-right">
+              <span class="badge b-green">Active</span>
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+          <div class="consent-card">
+            <div class="cc-icon">🏥</div>
+            <div class="cc-body">
+              <div class="cc-name">Yashoda Hospital, Hyderabad</div>
+              <div class="cc-meta">HIP ID: YASHODA-HYD-001 · 4 records shared · Last pull: 8 Mar 2026</div>
+            </div>
+            <div class="cc-right">
+              <span class="badge b-green">Active</span>
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+          <div class="consent-card">
+            <div class="cc-icon">🧪</div>
+            <div class="cc-body">
+              <div class="cc-name">Thyrocare Diagnostics</div>
+              <div class="cc-meta">HIP ID: THYROCARE-001 · 6 lab reports · Last pull: 14 Mar 2026</div>
+            </div>
+            <div class="cc-right">
+              <span class="badge b-green">Active</span>
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+          <div class="consent-card">
+            <div class="cc-icon">🏥</div>
+            <div class="cc-body">
+              <div class="cc-name">CARE Hospitals</div>
+              <div class="cc-meta">HIP ID: CARE-HYD-001 · 2 records shared · Consent expires 30 Apr 2026</div>
+            </div>
+            <div class="cc-right">
+              <span class="badge b-amber">Expiring</span>
+              <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Access Log</div>
+          <div class="card-sub">Every access to your records is logged and auditable</div>
+        </div>
+        <table>
+          <thead><tr><th>Who Accessed</th><th>What</th><th>When</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>Dr. Sharma (Apollo)</td><td>Lipid Panel, Prescription</td><td class="font-mono" style="font-size:12px">14 Mar 2026, 11:24am</td><td>OPD Consultation</td></tr>
+            <tr><td>Thyrocare Lab</td><td>Patient Demographics</td><td class="font-mono" style="font-size:12px">14 Mar 2026, 9:02am</td><td>Sample Collection</td></tr>
+            <tr><td>Dr. Reddy (Yashoda)</td><td>ECG, Discharge Summary</td><td class="font-mono" style="font-size:12px">12 Mar 2026, 3:41pm</td><td>Referral Review</td></tr>
+            <tr><td>MedInsight AI</td><td>All records</td><td class="font-mono" style="font-size:12px">14 Mar 2026, 11:30am</td><td>Correlation Analysis</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ SHARE ═══ -->
+    <div class="page" id="page-share">
+      <div class="page-header">
+        <div class="page-title">Share Records</div>
+        <div class="page-sub">Create a secure, time-limited link to share records with your doctor</div>
+      </div>
+      <div class="card" style="max-width:560px">
+        <div class="card-head"><div class="card-title">Create Sharing Link</div></div>
+        <div class="share-form">
+          <div class="form-group">
+            <label class="form-label">Doctor's name or email</label>
+            <input class="form-input" placeholder="Dr. Patel or drpatel@hospital.com" type="text">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Records to share</label>
+            <select class="form-select" multiple style="height:90px">
+              <option selected>HbA1c & Lipid Panel — 14 Mar 2026</option>
+              <option selected>Dr. Sharma Prescription — 10 Mar 2026</option>
+              <option>Chest X-Ray — 8 Mar 2026</option>
+              <option>ECG Report — 18 Jan 2026</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Access duration</label>
+            <select class="form-select">
+              <option>24 hours</option>
+              <option>3 days</option>
+              <option>1 week</option>
+              <option>1 month</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="generateShareLink()" style="width:100%;justify-content:center;padding:10px">Generate Secure Link</button>
+          <div id="shareLinkBox" style="display:none">
+            <div class="share-link-box">
+              <div class="sl-url" id="shareUrl">https://medinsight.in/share/3f8a2b...</div>
+              <button class="btn" onclick="showToast('Link copied!')">Copy</button>
+            </div>
+            <div class="text-sm text-muted mt-2">Link expires in 24 hours · Includes AI-generated summary for the doctor</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════ EMERGENCY QR ═══ -->
+    <div class="page" id="page-emergency">
+      <div class="page-header">
+        <div class="page-title">Emergency QR Card</div>
+        <div class="page-sub">First responders can scan this to see your critical health information immediately</div>
+      </div>
+      <div class="qr-layout">
+        <div class="qr-box">
+          <div class="qr-code">⬛</div>
+          <div class="qr-label">Scan in emergency</div>
+          <div style="margin-top:12px;display:flex;flex-direction:column;gap:7px">
+            <button class="btn" style="width:100%;justify-content:center;font-size:12.5px" onclick="showToast('QR downloaded')">Download QR</button>
+            <button class="btn" style="width:100%;justify-content:center;font-size:12.5px" onclick="showToast('Print dialog opened')">Print Card</button>
+          </div>
+        </div>
+        <div>
+          <div class="emergency-info mb-4">
+            <div class="ei-title">⚕ Critical Medical Information</div>
+            <div class="ei-row"><span class="ei-key">Name</span> Sandeep Reddy, 22 years</div>
+            <div class="ei-row"><span class="ei-key">Blood Group</span> B Positive</div>
+            <div class="ei-row"><span class="ei-key">Allergies</span> Penicillin — DO NOT ADMINISTER</div>
+            <div class="ei-row"><span class="ei-key">Conditions</span> Pre-diabetes, Hypertension Stage 1</div>
+            <div class="ei-row"><span class="ei-key">Medications</span> Atorvastatin 40mg, Metformin 500mg, Ramipril 5mg</div>
+            <div class="ei-row"><span class="ei-key">Emergency Contact</span> Ramesh Reddy · +91-98765-43210</div>
+          </div>
+          <div class="card">
+            <div class="card-title mb-4">What gets shared via QR</div>
+            <div class="insight-card" style="margin-bottom:8px">
+              <div class="insight-head"><div class="insight-pip pip-green"></div><div class="insight-title">No login required for first responders</div></div>
+              <div class="insight-body">The QR shows only essential emergency info — no full medical history. Fully accessible even without the patient being conscious.</div>
+            </div>
+            <div class="insight-card">
+              <div class="insight-head"><div class="insight-pip pip-blue"></div><div class="insight-title">You control what's visible</div></div>
+              <div class="insight-body">You can edit which information appears on the emergency card at any time. Changes take effect immediately.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ── Navigation ─────────────────────────────────────────── */
+const pageMeta = {
+  dashboard: ['Dashboard', 'Your health at a glance'],
+  records: ['My Records', 'All your medical documents'],
+  translator: ['Report Translator', 'Plain language explanations'],
+  correlations: ['Data Correlations', 'Patterns in your health data'],
+  alerts: ['Health Alerts', 'Guideline-based notifications'],
+  medications: ['Medications', 'Current medications and interactions'],
+  profile: ['Health Profile', 'Complete health summary'],
+  consent: ['Consent & Access', 'Control who sees your records'],
+  share: ['Share Records', 'Secure sharing with doctors'],
+  emergency: ['Emergency QR', 'Critical info for first responders'],
+};
+
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const [title, sub] = pageMeta[id] || ['', ''];
+  document.getElementById('topbarTitle').textContent = title;
+  document.getElementById('topbarSub').textContent = sub;
+  // close report view when switching away
+  if (id !== 'records') closeReport();
+  window.scrollTo(0, 0);
+}
+
+/* ── Modal ──────────────────────────────────────────────── */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.getElementById('filePrev').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+}
+document.getElementById('uploadModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal('uploadModal');
+});
+
+function handleModalDrop(e, zone) {
+  e.preventDefault(); zone.classList.remove('drag-active');
+  const f = e.dataTransfer.files[0];
+  if (f) showFilePreview(f);
+}
+function handleFileSelect(input) {
+  if (input.files[0]) showFilePreview(input.files[0]);
+}
+function showFilePreview(f) {
+  const prev = document.getElementById('filePrev');
+  prev.style.display = 'block';
+  prev.innerHTML = `📎 <strong>${f.name}</strong>  ·  ${(f.size/1024/1024).toFixed(2)} MB  ·  <span style="color:var(--green)">Ready to analyze</span>`;
+}
+
+/* ── Processing simulation ──────────────────────────────── */
+function startProcessing() {
+  closeModal('uploadModal');
+  showPage('records', document.querySelector('[onclick*="records"]'));
+  const card = document.getElementById('processingCard');
+  const fill = document.getElementById('progressFill');
+  card.classList.add('show');
+  const steps = ['step1','step2','step3','step4'];
+  const progTargets = [20, 50, 75, 100];
+  let i = 0;
+  steps.forEach(s => { const el = document.getElementById(s); el.classList.remove('done','active'); el.querySelector('.step-check').textContent = parseInt(s.replace('step',''));  });
+  fill.style.width = '0%';
+
+  function runStep() {
+    if (i > 0) {
+      document.getElementById(steps[i-1]).classList.remove('active');
+      document.getElementById(steps[i-1]).classList.add('done');
+      document.getElementById(steps[i-1]).querySelector('.step-check').textContent = '✓';
+    }
+    if (i < steps.length) {
+      document.getElementById(steps[i]).classList.add('active');
+      fill.style.width = progTargets[i] + '%';
+      i++;
+      setTimeout(runStep, 900 + Math.random()*400);
+    } else {
+      setTimeout(() => {
+        card.classList.remove('show');
+        showToast('Document analyzed — 3 new insights found');
+      }, 600);
+    }
+  }
+  runStep();
+}
+
+/* ── Report viewer ──────────────────────────────────────── */
+function openReport(type) {
+  const view = document.getElementById('reportView');
+  const tableCard = document.getElementById('recordsTableCard');
+  view.classList.add('open');
+  tableCard.style.display = 'none';
+  showPage('records', document.querySelector('[onclick*="records"]'));
+}
+function closeReport() {
+  document.getElementById('reportView').classList.remove('open');
+  const tc = document.getElementById('recordsTableCard');
+  if (tc) tc.style.display = '';
+}
+
+/* ── Tabs ───────────────────────────────────────────────── */
+function switchTab(btn, panelId) {
+  const parent = btn.closest('.tabs');
+  parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const panels = document.querySelectorAll('.tab-panel');
+  panels.forEach(p => p.classList.remove('active'));
+  document.getElementById(panelId).classList.add('active');
+}
+
+/* ── Share link ─────────────────────────────────────────── */
+function generateShareLink() {
+  const box = document.getElementById('shareLinkBox');
+  const url = document.getElementById('shareUrl');
+  const token = Math.random().toString(36).substring(2,10);
+  url.textContent = 'https://medinsight.in/share/' + token;
+  box.style.display = 'block';
+  showToast('Secure link created — expires in 24 hours');
+}
+
+/* ── Toast ──────────────────────────────────────────────── */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ── Count up ───────────────────────────────────────────── */
+function countUp(id, target, delay=0) {
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    const dur = 900;
+    const start = performance.now();
+    function step(now) {
+      const p = Math.min((now-start)/dur, 1);
+      const ease = 1-Math.pow(1-p,3);
+      el.textContent = Math.round(target*ease);
+      if (p<1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }, delay);
+}
+
+window.addEventListener('load', () => {
+  countUp('cnt1', 8, 300);
+  countUp('cnt2', 5, 450);
+  countUp('cnt3', 3, 600);
+  countUp('cnt4', 3, 750);
+});
+</script>
+</body>
+</html>
