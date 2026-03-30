@@ -1,178 +1,101 @@
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { useAuthStore } from '@/store/auth';
 import { authApi } from '@/services/api';
-import { Heart, Save } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import { User, Mail, Phone, Calendar, LogOut, Shield, Heart } from 'lucide-react';
 
-const profileSchema = z.object({
-  full_name: z.string().min(2),
-  phone: z.string().optional(),
-  date_of_birth: z.string().optional(),
-  gender: z.string().optional(),
-});
-
-type ProfileForm = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
+  const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-  const { user, setUser, logout } = useAuthStore();
-  
-  const {
-    register,
-    handleSubmit,
-    formState: { isSubmitting },
-  } = useForm<ProfileForm>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      full_name: user?.full_name || '',
-      phone: user?.phone || '',
-      date_of_birth: user?.date_of_birth?.split('T')[0] || '',
-      gender: user?.gender || '',
-    },
-  });
-  
-  const onSubmit = async () => {
-    try {
-      const response = await authApi.getMe();
-      setUser(response.data);
-      toast.success('Profile updated');
-    } catch {
-      toast.error('Failed to update profile');
-    }
-  };
-  
+  const [loggingOut, setLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    setLoggingOut(true);
     try {
       await authApi.logout();
     } catch {}
     logout();
     navigate('/login');
   };
-  
+
+  if (!user) return null;
+
+  const infoItems = [
+    { label: 'Full Name', value: user.full_name, icon: User },
+    { label: 'Email', value: user.email, icon: Mail },
+    { label: 'Phone', value: user.phone || 'Not set', icon: Phone },
+    { label: 'Date of Birth', value: user.date_of_birth || 'Not set', icon: Calendar },
+    { label: 'Gender', value: user.gender || 'Not set', icon: User },
+    { label: 'Role', value: user.role, icon: Shield },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-        <p className="text-gray-500">Manage your account settings</p>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile Info */}
-        <div className="lg:col-span-2">
-          <div className="card">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="flex items-center gap-4 pb-6 border-b">
-                <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center">
-                  <span className="text-3xl font-bold text-primary-700">
-                    {user?.full_name?.charAt(0).toUpperCase() || 'U'}
-                  </span>
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">{user?.full_name}</h2>
-                  <p className="text-gray-500">{user?.email}</p>
-                  <span className="inline-block mt-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full capitalize">
-                    {user?.role}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Name
-                  </label>
-                  <input
-                    {...register('full_name')}
-                    type="text"
-                    className="input-field"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </label>
-                  <input
-                    {...register('phone')}
-                    type="tel"
-                    className="input-field"
-                    placeholder="+91 98765 43210"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date of Birth
-                  </label>
-                  <input
-                    {...register('date_of_birth')}
-                    type="date"
-                    className="input-field"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Gender
-                  </label>
-                  <select {...register('gender')} className="input-field">
-                    <option value="">Select</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div className="flex justify-end">
-                <button type="submit" disabled={isSubmitting} className="btn-primary flex items-center gap-2">
-                  <Save className="h-4 w-4" />
-                  {isSubmitting ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
-          </div>
+    <div className="max-w-lg mx-auto space-y-6">
+      <h1 className="text-xl font-bold text-gray-900">Profile</h1>
+
+      {/* Avatar */}
+      <div className="card p-8 flex items-center gap-4">
+        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+          <span className="text-2xl font-bold text-gray-700">{user.full_name[0]?.toUpperCase()}</span>
         </div>
-        
-        {/* ABHA Card */}
         <div>
-          <div className="card bg-gradient-to-br from-primary-500 to-primary-700 text-white">
-            <div className="flex items-center gap-2 mb-4">
-              <Heart className="h-5 w-5" />
-              <span className="font-semibold">ABHA</span>
-            </div>
-            
-            {user?.abha_number ? (
-              <div>
-                <p className="text-sm opacity-80">ABHA Number</p>
-                <p className="text-2xl font-mono font-bold tracking-wider">
-                  {user.abha_number}
-                </p>
-                {user.abha_address && (
-                  <div className="mt-4">
-                    <p className="text-sm opacity-80">ABHA Address</p>
-                    <p className="font-mono">{user.abha_address}</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm opacity-80">
-                Link your ABHA number for ABDM integration
-              </p>
-            )}
-          </div>
-          
-          <button
-            onClick={handleLogout}
-            className="w-full mt-4 btn-danger flex items-center justify-center gap-2"
-          >
-            Logout
-          </button>
+          <p className="text-lg font-semibold text-gray-900">{user.full_name}</p>
+          <p className="text-sm text-gray-500">{user.email}</p>
+          {user.is_verified && (
+            <span className="inline-flex items-center gap-1 text-xs text-emerald-600 mt-1">
+              <Shield className="h-3 w-3" />Verified
+            </span>
+          )}
         </div>
       </div>
+
+      {/* Info */}
+      <div className="card divide-y divide-gray-100">
+        {infoItems.map(item => (
+          <div key={item.label} className="flex items-center gap-4 px-6 py-3.5">
+            <div className="w-9 h-9 rounded-2xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+              <item.icon className="h-4 w-4 text-gray-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-400">{item.label}</p>
+              <p className="text-sm text-gray-900 capitalize">{item.value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ABHA */}
+      {(user.abha_number || user.abha_address) && (
+        <div className="card p-6">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Heart className="h-4 w-4 text-blue-600" />
+            ABHA Details
+          </h3>
+          {user.abha_number && (
+            <div className="mb-2">
+              <p className="text-xs text-gray-400">ABHA Number</p>
+              <p className="text-sm text-gray-900 font-mono">{user.abha_number}</p>
+            </div>
+          )}
+          {user.abha_address && (
+            <div>
+              <p className="text-xs text-gray-400">ABHA Address</p>
+              <p className="text-sm text-gray-900 font-mono">{user.abha_address}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Logout */}
+      <button
+        onClick={handleLogout}
+        disabled={loggingOut}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-full border border-red-200 text-red-600 hover:bg-red-50 transition-colors text-sm font-medium"
+      >
+        <LogOut className="h-4 w-4" />
+        {loggingOut ? 'Signing out...' : 'Sign Out'}
+      </button>
     </div>
   );
 }

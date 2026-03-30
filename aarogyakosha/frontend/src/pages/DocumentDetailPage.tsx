@@ -1,334 +1,318 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  FileText, 
-  Calendar, 
-  Building, 
-  Share2, 
-  Trash2,
-  Loader2,
-  Pill,
-  Stethoscope,
-  Activity,
-  AlertTriangle,
-  CheckCircle,
-  RefreshCw
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, FileText, Clock, CheckCircle2, AlertCircle, Loader2, Brain, Share2, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { documentsApi, aiApi, sharingApi } from '@/services/api';
-import type { Document } from '@/types';
+import { Document } from '@/types';
+import { format, parseISO } from 'date-fns';
 import toast from 'react-hot-toast';
+
+const TYPE_LABELS: Record<string, string> = {
+  prescription: 'Prescription', lab_report: 'Lab Report', discharge_summary: 'Discharge Summary',
+  op_consultation: 'OP Consultation', immunization: 'Immunization', wellness_record: 'Wellness',
+  health_document: 'Health Document', other: 'Other',
+};
 
 export default function DocumentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [document, setDocument] = useState<Document | null>(null);
+  const [doc, setDoc] = useState<Document | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
-  const [creatingShare, setCreatingShare] = useState(false);
-  
-  useEffect(() => {
-    if (id) {
-      fetchDocument(id);
-    }
-  }, [id]);
-  
-  const fetchDocument = async (docId: string) => {
-    try {
-      const response = await documentsApi.get(docId);
-      setDocument(response.data);
-    } catch (error) {
-      toast.error('Failed to load document');
-      navigate('/documents');
-    } finally {
-      setLoading(false);
-    }
+  const [showText, setShowText] = useState(false);
+  const [textContent, setTextContent] = useState('');
+  const [textLoading, setTextLoading] = useState(false);
+
+  const fetchDoc = () => {
+    if (!id) return;
+    setLoading(true);
+    documentsApi.get(id)
+      .then(r => setDoc(r.data))
+      .catch(() => toast.error('Document not found'))
+      .finally(() => setLoading(false));
   };
-  
+
+  useEffect(() => { fetchDoc(); }, [id]);
+
   const handleAnalyze = async () => {
     if (!id) return;
-    
     setAnalyzing(true);
     try {
       await aiApi.analyze(id);
-      toast.success('Document analyzed successfully');
-      fetchDocument(id);
-    } catch (error) {
-      toast.error('Analysis failed');
+      toast.success('Analysis complete');
+      fetchDoc();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || 'Analysis failed. Make sure the document has extracted text.');
     } finally {
       setAnalyzing(false);
     }
   };
-  
-  const handleShare = async () => {
+
+  const handleToggleText = async () => {
+    if (showText) { setShowText(false); return; }
+    if (textContent) { setShowText(true); return; }
     if (!id) return;
-    
-    setCreatingShare(true);
+    setTextLoading(true);
     try {
-      const response = await sharingApi.create({
-        document_id: id,
-        expires_in_hours: 24,
-      });
-      
-      const shareUrl = `${window.location.origin}/share/${response.data.token}`;
-      await navigator.clipboard.writeText(shareUrl);
-      toast.success('Share link copied to clipboard!');
-    } catch (error) {
-      toast.error('Failed to create share link');
+      const r = await documentsApi.getText(id);
+      setTextContent(r.data.text || r.data.extracted_text || 'No text available');
+      setShowText(true);
+    } catch {
+      toast.error('Could not load text');
     } finally {
-      setCreatingShare(false);
+      setTextLoading(false);
     }
   };
-  
+
+  const handleShare = async () => {
+    if (!id) return;
+    try {
+      const r = await sharingApi.create({ document_id: id, expires_in_hours: 72 });
+      const url = r.data.share_url || `${window.location.origin}/share/${r.data.token}`;
+      await navigator.clipboard.writeText(url);
+      toast.success('Share link copied!');
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || 'Could not create share link');
+    }
+  };
+
   const handleDelete = async () => {
-    if (!id || !confirm('Are you sure you want to delete this document?')) return;
-    
+    if (!id || !confirm('Delete this document permanently?')) return;
     try {
       await documentsApi.delete(id);
       toast.success('Document deleted');
       navigate('/documents');
-    } catch (error) {
-      toast.error('Failed to delete document');
+    } catch {
+      toast.error('Delete failed');
     }
   };
-  
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+        <div className="w-6 h-6 border-2 border-gray-900/30 border-t-gray-900 rounded-full animate-spin" />
       </div>
     );
   }
-  
-  if (!document) {
+
+  if (!doc) {
     return (
-      <div className="text-center py-12">
-        <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-        <p className="text-gray-500">Document not found</p>
+      <div className="text-center py-16">
+        <p className="text-sm text-gray-500">Document not found</p>
+        <Link to="/documents" className="text-sm text-gray-900 hover:underline font-medium mt-2 inline-block">Back to documents</Link>
       </div>
     );
   }
-  
+
+  const insights = doc.ai_insights;
+  const entities = doc.extracted_entities;
+
   return (
     <div className="space-y-6">
+      {/* Back */}
+      <button onClick={() => navigate('/documents')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+        <ArrowLeft className="h-4 w-4" />
+        Back to documents
+      </button>
+
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{document.title}</h1>
-          <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
-            <span className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
-              {new Date(document.created_at).toLocaleDateString()}
-            </span>
-            {document.source_hospital && (
-              <span className="flex items-center gap-1">
-                <Building className="h-4 w-4" />
-                {document.source_hospital}
-              </span>
-            )}
-            <span className="px-2 py-1 bg-gray-100 rounded-full text-xs font-medium">
-              {document.document_type.replace('_', ' ')}
-            </span>
+      <div className="card p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+              <FileText className="h-6 w-6 text-gray-500" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">{doc.title || doc.file_name}</h1>
+              <div className="flex items-center gap-3 mt-1.5 text-sm text-gray-500">
+                <span className="badge-gray">{TYPE_LABELS[doc.document_type] || doc.document_type}</span>
+                {doc.source_hospital && <span>{doc.source_hospital}</span>}
+                {doc.created_at && <span>{format(parseISO(doc.created_at), 'dd MMM yyyy')}</span>}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={handleShare} className="btn px-3 py-2" title="Share">
+              <Share2 className="h-4 w-4" />
+            </button>
+            <button onClick={handleDelete} className="btn px-3 py-2 text-red-500 hover:bg-red-50" title="Delete">
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
         </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={handleShare}
-            disabled={creatingShare}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <Share2 className="h-4 w-4" />
-            {creatingShare ? 'Creating...' : 'Share'}
-          </button>
-          <button
-            onClick={handleDelete}
-            className="btn-danger flex items-center gap-2"
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete
-          </button>
+
+        {/* Status */}
+        <div className="flex items-center gap-2 mt-4 text-sm">
+          {doc.status === 'completed' && <><CheckCircle2 className="h-4 w-4 text-emerald-500" /><span className="text-emerald-600">Processed</span></>}
+          {doc.status === 'processing' && <><Loader2 className="h-4 w-4 text-gray-900 animate-spin" /><span className="text-gray-600">Processing</span></>}
+          {doc.status === 'pending' && <><Clock className="h-4 w-4 text-amber-500" /><span className="text-amber-600">Pending</span></>}
+          {doc.status === 'failed' && <><AlertCircle className="h-4 w-4 text-red-500" /><span className="text-red-600">Failed</span></>}
+          <span className="text-gray-400">·</span>
+          <span className="text-gray-400">{(doc.file_size / 1024).toFixed(0)} KB</span>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* AI Summary */}
-          {(document.ai_summary || document.ai_insights) && (
-            <div className="card">
-              <div className="flex items-center gap-2 mb-4">
-                <Activity className="h-5 w-5 text-primary-600" />
-                <h2 className="text-lg font-semibold text-gray-900">AI Summary</h2>
-              </div>
-              
-              <p className="text-gray-700">{document.ai_summary || document.ai_insights?.summary}</p>
-              
-              {document.ai_insights?.key_findings && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">Key Findings</h3>
-                  <ul className="space-y-2">
-                    {document.ai_insights.key_findings.map((finding, index) => (
-                      <li key={index} className="flex items-start gap-2 text-sm text-gray-600">
-                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        {finding}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {document.ai_insights?.action_items && document.ai_insights.action_items.length > 0 && (
-                <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
-                  <h3 className="text-sm font-medium text-yellow-800 mb-2">Action Items</h3>
-                  <ul className="space-y-1">
-                    {document.ai_insights.action_items.map((item, index) => (
-                      <li key={index} className="text-sm text-yellow-700">• {item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-          
-          {/* Analyze Button */}
-          {!document.ai_summary && (
-            <div className="card text-center py-8">
-              <Stethoscope className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4">
-                Get AI-powered insights from this document
-              </p>
-              <button
-                onClick={handleAnalyze}
-                disabled={analyzing || document.status === 'processing'}
-                className="btn-primary flex items-center gap-2 mx-auto"
-              >
+        <div className="lg:col-span-2 space-y-5">
+          {/* AI Analysis */}
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <Brain className="h-4 w-4 text-blue-600" />
+                AI Analysis
+              </h2>
+              <button onClick={handleAnalyze} disabled={analyzing} className="btn-primary text-xs px-4 py-1.5">
                 {analyzing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4" />
-                    Analyze with AI
-                  </>
-                )}
+                  </span>
+                ) : insights ? 'Re-analyze' : 'Analyze with AI'}
               </button>
             </div>
-          )}
-          
+            {insights ? (
+              <div className="space-y-4">
+                {insights.summary && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Summary</p>
+                    <p className="text-sm text-gray-700 leading-relaxed">{insights.summary}</p>
+                  </div>
+                )}
+                {insights.key_findings?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Key Findings</p>
+                    <ul className="space-y-1">
+                      {insights.key_findings.map((f, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {insights.warnings?.length > 0 && (
+                  <div className="bg-amber-50 rounded-lg p-3">
+                    <p className="text-xs font-medium text-amber-700 mb-1">Warnings</p>
+                    {insights.warnings.map((w, i) => (
+                      <p key={i} className="text-sm text-amber-700">{w}</p>
+                    ))}
+                  </div>
+                )}
+                {insights.action_items?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Action Items</p>
+                    <ul className="space-y-1">
+                      {insights.action_items.map((a, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                          {a}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">Click "Analyze with AI" to generate insights from this document.</p>
+            )}
+          </div>
+
           {/* Extracted Text */}
-          {document.extracted_text && (
-            <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Extracted Text</h2>
-              <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-gray-50 p-4 rounded-lg overflow-auto max-h-96">
-                {document.extracted_text}
+          <div className="card p-6">
+            <button onClick={handleToggleText} className="flex items-center justify-between w-full text-sm font-semibold text-gray-900">
+              <span>Extracted Text</span>
+              {textLoading ? (
+                <div className="w-4 h-4 border-2 border-gray-900/30 border-t-gray-900 rounded-full animate-spin" />
+              ) : showText ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+            {showText && (
+              <pre className="mt-3 text-sm text-gray-600 whitespace-pre-wrap font-sans leading-relaxed bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                {textContent || 'No text extracted yet.'}
               </pre>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-        
+
         {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Extracted Entities */}
-          {document.extracted_entities && (
-            <div className="card">
-              <h3 className="font-medium text-gray-900 mb-4">Extracted Information</h3>
-              
-              {document.extracted_entities.medications?.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-                    <Pill className="h-4 w-4 text-green-600" />
-                    Medications
-                  </h4>
-                  <ul className="space-y-1">
-                    {document.extracted_entities.medications.map((med, index) => (
-                      <li key={index} className="text-sm text-gray-600">
-                        {med.text}
-                        {med.dosage && <span className="text-gray-400"> - {med.dosage}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {document.extracted_entities.diagnoses?.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-                    <Stethoscope className="h-4 w-4 text-blue-600" />
-                    Diagnoses
-                  </h4>
-                  <ul className="space-y-1">
-                    {document.extracted_entities.diagnoses.map((diag, index) => (
-                      <li key={index} className="text-sm text-gray-600">{diag.text}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {document.extracted_entities.lab_results?.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-                    <Activity className="h-4 w-4 text-purple-600" />
-                    Lab Results
-                  </h4>
-                  <ul className="space-y-1">
-                    {document.extracted_entities.lab_results.map((lab: { test?: string; component?: string; value?: string; unit?: string }, index: number) => (
-                      <li key={index} className="text-sm text-gray-600">
-                        {(lab as any).test || (lab as any).component}: {lab.value} {lab.unit}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+        <div className="space-y-5">
+          {/* Entities */}
+          {entities && (
+            <div className="card p-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Extracted Entities</h3>
+              <div className="space-y-3">
+                {entities.medications?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">Medications</p>
+                    <div className="flex flex-wrap gap-1">
+                      {entities.medications.map((m, i) => (
+                        <span key={i} className="badge-blue text-[11px]">{m.text || m.type}{m.dosage ? ` (${m.dosage})` : ''}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {entities.diagnoses?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">Diagnoses</p>
+                    <div className="flex flex-wrap gap-1">
+                      {entities.diagnoses.map((d, i) => (
+                        <span key={i} className="badge-red text-[11px]">{d.text || d.type}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {entities.lab_results?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">Lab Results</p>
+                    <div className="flex flex-wrap gap-1">
+                      {entities.lab_results.map((l, i) => (
+                        <span key={i} className="badge-green text-[11px]">{l.test || l.text}: {l.value} {l.unit || ''}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {entities.vitals?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">Vitals</p>
+                    <div className="flex flex-wrap gap-1">
+                      {entities.vitals.map((v, i) => (
+                        <span key={i} className="badge-purple text-[11px]">{v.vital || v.text}: {v.value} {v.unit || ''}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
-          
+
           {/* Document Info */}
-          <div className="card">
-            <h3 className="font-medium text-gray-900 mb-4">Document Info</h3>
-            <dl className="space-y-3 text-sm">
+          <div className="card p-6">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Document Info</h3>
+            <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <dt className="text-gray-500">File Name</dt>
-                <dd className="text-gray-900 truncate max-w-[150px]">{document.file_name}</dd>
+                <dt className="text-gray-500">Type</dt>
+                <dd className="text-gray-900">{TYPE_LABELS[doc.document_type] || doc.document_type}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-gray-500">File</dt>
+                <dd className="text-gray-900 truncate max-w-[140px]">{doc.file_name}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500">Size</dt>
-                <dd className="text-gray-900">{formatFileSize(document.file_size)}</dd>
+                <dd className="text-gray-900">{(doc.file_size / 1024).toFixed(0)} KB</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-500">Status</dt>
-                <dd className="text-gray-900 capitalize">{document.status}</dd>
+                <dt className="text-gray-500">Uploaded</dt>
+                <dd className="text-gray-900">{doc.created_at ? format(parseISO(doc.created_at), 'dd MMM yyyy') : '-'}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500">Source</dt>
-                <dd className="text-gray-900 capitalize">{document.source}</dd>
+                <dd className="text-gray-900">{doc.source || 'upload'}</dd>
               </div>
             </dl>
           </div>
-          
-          {/* Warnings */}
-          {document.ai_insights?.warnings && document.ai_insights.warnings.length > 0 && (
-            <div className="card border-yellow-300 bg-yellow-50">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                <h3 className="font-medium text-yellow-800">Important Notes</h3>
-              </div>
-              <ul className="space-y-2">
-                {document.ai_insights.warnings.map((warning, index) => (
-                  <li key={index} className="text-sm text-yellow-700">• {warning}</li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
       </div>
     </div>
   );
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }

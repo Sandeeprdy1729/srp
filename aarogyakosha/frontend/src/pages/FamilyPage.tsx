@@ -1,294 +1,168 @@
-import { useEffect, useState } from 'react';
-import { Plus, Users, X, Shield, Mail } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState, useEffect } from 'react';
+import { Users, X, Trash2, Eye, Upload as UploadIcon, UserPlus } from 'lucide-react';
 import { familyApi, patientsApi } from '@/services/api';
-import type { FamilyAccess, Patient } from '@/types';
+import { FamilyAccess, Patient } from '@/types';
 import toast from 'react-hot-toast';
-
-const addMemberSchema = z.object({
-  member_email: z.string().email('Invalid email'),
-  patient_id: z.string().uuid('Select a patient'),
-  relationship_type: z.string().optional(),
-  can_view: z.boolean().default(true),
-  can_upload: z.boolean().default(false),
-});
-
-type AddMemberForm = z.infer<typeof addMemberSchema>;
 
 export default function FamilyPage() {
   const [members, setMembers] = useState<FamilyAccess[]>([]);
-  const [sharedWithMe, setSharedWithMe] = useState<any[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
-  
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<AddMemberForm>({
-    resolver: zodResolver(addMemberSchema),
-  });
-  
+  const [showAdd, setShowAdd] = useState(false);
+  const [email, setEmail] = useState('');
+  const [patientId, setPatientId] = useState('');
+  const [canView, setCanView] = useState(true);
+  const [canUpload, setCanUpload] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  const fetchMembers = () => {
+    familyApi.list()
+      .then(r => setMembers(Array.isArray(r.data) ? r.data : r.data.items || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
   useEffect(() => {
-    fetchData();
+    fetchMembers();
+    patientsApi.list().then(r => {
+      const list = Array.isArray(r.data) ? r.data : r.data.items || [];
+      setPatients(list);
+      if (list.length > 0) setPatientId(list[0].id);
+    }).catch(() => {});
   }, []);
-  
-  const fetchData = async () => {
+
+  const handleAdd = async () => {
+    if (!email) return toast.error('Enter an email');
+    if (!patientId) return toast.error('No patient profile available');
+    setAdding(true);
     try {
-      const [membersRes, sharedRes, patientsRes] = await Promise.all([
-        familyApi.list(),
-        familyApi.sharedWithMe(),
-        patientsApi.list(),
-      ]);
-      setMembers(membersRes.data);
-      setSharedWithMe(sharedRes.data);
-      setPatients(patientsRes.data);
-    } catch (error) {
-      toast.error('Failed to load family data');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const onSubmit = async (data: AddMemberForm) => {
-    try {
-      await familyApi.add({
-        ...data,
-        patient_id: data.patient_id,
-      });
+      await familyApi.add({ member_email: email, patient_id: patientId, can_view: canView, can_upload: canUpload });
       toast.success('Family member added');
-      setShowAddModal(false);
-      reset();
-      fetchData();
-    } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to add member');
+      setShowAdd(false);
+      setEmail('');
+      fetchMembers();
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || 'Could not add member');
+    } finally {
+      setAdding(false);
     }
   };
-  
-  const handleRemove = async (id: string) => {
-    if (!confirm('Are you sure you want to remove this member?')) return;
-    
+
+  const togglePermission = async (member: FamilyAccess, field: 'can_view' | 'can_upload') => {
+    try {
+      await familyApi.update(member.id, { [field]: !member[field] });
+      setMembers(prev => prev.map(m => m.id === member.id ? { ...m, [field]: !m[field] } : m));
+    } catch {
+      toast.error('Update failed');
+    }
+  };
+
+  const removeMember = async (id: string) => {
+    if (!confirm('Remove this family member?')) return;
     try {
       await familyApi.remove(id);
-      setMembers(members.filter(m => m.id !== id));
       toast.success('Member removed');
-    } catch (error) {
-      toast.error('Failed to remove member');
+      fetchMembers();
+    } catch {
+      toast.error('Remove failed');
     }
   };
-  
-  const handleUpdate = async (id: string, data: { can_view?: boolean; can_upload?: boolean }) => {
-    try {
-      await familyApi.update(id, data);
-      fetchData();
-      toast.success('Permissions updated');
-    } catch (error) {
-      toast.error('Failed to update permissions');
-    }
-  };
-  
+
   if (loading) {
-    return <div className="animate-pulse">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-6 h-6 border-2 border-gray-900/30 border-t-gray-900 rounded-full animate-spin" />
+      </div>
+    );
   }
-  
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Family Access</h1>
-          <p className="text-gray-500">Manage who can access your health records</p>
+          <h1 className="text-xl font-bold text-gray-900">Family</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Manage family member access</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
+        <button onClick={() => setShowAdd(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
+          <UserPlus className="h-4 w-4" />
           Add Member
         </button>
       </div>
-      
-      {/* Family members with access to your records */}
-      <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary-600" />
-          Members with Access
-        </h2>
-        
-        {members.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No family members added yet</p>
-        ) : (
-          <div className="space-y-4">
-            {members.map((member) => (
-              <div key={member.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                    <span className="text-sm font-medium text-primary-700">
-                      {member.member_name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{member.member_name}</p>
-                    <p className="text-sm text-gray-500">{member.member_email}</p>
-                    {member.relationship_type && (
-                      <span className="text-xs text-gray-400">{member.relationship_type}</span>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600">
-                      <input
-                        type="checkbox"
-                        checked={member.can_view}
-                        onChange={(e) => handleUpdate(member.id, { can_view: e.target.checked })}
-                        className="mr-1"
-                      />
-                      View
-                    </label>
-                    <label className="text-sm text-gray-600">
-                      <input
-                        type="checkbox"
-                        checked={member.can_upload}
-                        onChange={(e) => handleUpdate(member.id, { can_upload: e.target.checked })}
-                        className="mr-1"
-                      />
-                      Upload
-                    </label>
-                  </div>
-                  <button
-                    onClick={() => handleRemove(member.id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
+
+      {/* Add Modal */}
+      {showAdd && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowAdd(false)}>
+          <div className="bg-white rounded-3xl shadow-elevated w-full max-w-md p-8 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-900">Add Family Member</h2>
+              <button onClick={() => setShowAdd(false)} className="p-1 hover:bg-gray-100 rounded"><X className="h-4 w-4" /></button>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Member's Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="family@example.com" className="input" />
+            </div>
+            {patients.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Patient Profile</label>
+                <select value={patientId} onChange={e => setPatientId(e.target.value)} className="input">
+                  {patients.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
+                </select>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-      
-      {/* Records shared with you */}
-      {sharedWithMe.length > 0 && (
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Shield className="h-5 w-5 text-green-600" />
-            Shared With You
-          </h2>
-          
-          <div className="space-y-4">
-            {sharedWithMe.map((item) => (
-              <div key={item.access_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">{item.owner_name}</p>
-                  <p className="text-sm text-gray-500">Viewing: {item.patient_name}</p>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  {item.can_view && <span className="px-2 py-1 bg-green-100 text-green-700 rounded">View</span>}
-                  {item.can_upload && <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">Upload</span>}
-                </div>
-              </div>
-            ))}
+            )}
+            <div className="flex items-center gap-6 pt-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={canView} onChange={e => setCanView(e.target.checked)} className="rounded border-gray-300 text-gray-900 focus:ring-gray-900" />
+                <span className="text-sm text-gray-700">Can view records</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={canUpload} onChange={e => setCanUpload(e.target.checked)} className="rounded border-gray-300 text-gray-900 focus:ring-gray-900" />
+                <span className="text-sm text-gray-700">Can upload</span>
+              </label>
+            </div>
+            <button onClick={handleAdd} disabled={adding} className="btn-primary w-full py-2.5">
+              {adding ? 'Adding...' : 'Add Member'}
+            </button>
           </div>
         </div>
       )}
-      
-      {/* Add Member Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Add Family Member</h3>
-              <button onClick={() => setShowAddModal(false)}>
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
+
+      {/* Members List */}
+      {members.length === 0 ? (
+        <div className="card text-center py-16">
+          <Users className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-sm text-gray-500 mb-1">No family members added</p>
+          <button onClick={() => setShowAdd(true)} className="text-sm text-gray-900 hover:underline font-medium">Add your first member</button>
+        </div>
+      ) : (
+        <div className="card divide-y divide-gray-100">
+          {members.map(m => (
+            <div key={m.id} className="flex items-center gap-4 px-5 py-4">
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <span className="text-sm font-semibold text-gray-700">{(m.member_name || m.member_email)[0].toUpperCase()}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">{m.member_name || 'Unknown'}</p>
+                <p className="text-xs text-gray-400">{m.member_email}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => togglePermission(m, 'can_view')}
+                  className={`flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full transition-colors ${m.can_view ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-400'}`}
+                >
+                  <Eye className="h-3 w-3" />View
+                </button>
+                <button
+                  onClick={() => togglePermission(m, 'can_upload')}
+                  className={`flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full transition-colors ${m.can_upload ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-400'}`}
+                >
+                  <UploadIcon className="h-3 w-3" />Upload
+                </button>
+                <button onClick={() => removeMember(m.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-            
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    {...register('member_email')}
-                    type="email"
-                    placeholder="family@example.com"
-                    className="input-field pl-10"
-                  />
-                </div>
-                {errors.member_email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.member_email.message}</p>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Patient
-                </label>
-                <select
-                  {...register('patient_id')}
-                  className="input-field"
-                >
-                  <option value="">Select patient</option>
-                  {patients.map(patient => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.display_name}
-                    </option>
-                  ))}
-                </select>
-                {errors.patient_id && (
-                  <p className="mt-1 text-sm text-red-600">{errors.patient_id.message}</p>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Relationship (optional)
-                </label>
-                <input
-                  {...register('relationship_type')}
-                  type="text"
-                  placeholder="e.g., Spouse, Parent, Child"
-                  className="input-field"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" {...register('can_view')} className="rounded" />
-                  <span className="text-sm text-gray-700">Allow viewing records</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" {...register('can_upload')} className="rounded" />
-                  <span className="text-sm text-gray-700">Allow uploading documents</span>
-                </label>
-              </div>
-              
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="btn-primary"
-                >
-                  {isSubmitting ? 'Adding...' : 'Add Member'}
-                </button>
-              </div>
-            </form>
-          </div>
+          ))}
         </div>
       )}
     </div>

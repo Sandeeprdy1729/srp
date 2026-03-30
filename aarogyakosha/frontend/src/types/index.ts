@@ -134,15 +134,21 @@ export interface DashboardStats {
   total_documents: number;
   documents_this_month: number;
   pending_documents: number;
+  active_shares?: number;
+  family_members?: number;
   recent_activities: Activity[];
   health_trends: Record<string, any>;
   upcoming_reminders: Reminder[];
+  medications?: string[];
+  conditions?: string[];
+  reminders?: Array<{ title: string } | string>;
 }
 
 export interface Activity {
   type: string;
   action: string;
   title: string;
+  description?: string;
   document_type: string;
   timestamp: string;
 }
