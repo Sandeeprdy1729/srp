@@ -5,7 +5,7 @@ AarogyaKosha - Authentication Endpoints
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -128,7 +128,7 @@ async def login(
 
 
 @router.post("/refresh", response_model=Token)
-async def refresh_token(refresh_token: str):
+async def refresh_token(refresh_token: str = Body(..., embed=True)):
     """Refresh access token using refresh token."""
     payload = decode_token(refresh_token)
 

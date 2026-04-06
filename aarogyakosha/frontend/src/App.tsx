@@ -39,7 +39,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  const { setUser, setTokens, setLoading } = useAuthStore();
+  const { setUser, setLoading, logout } = useAuthStore();
   
   useEffect(() => {
     const initAuth = async () => {
@@ -49,7 +49,7 @@ function App() {
           const response = await authApi.getMe();
           setUser(response.data);
         } catch {
-          setTokens('', '');
+          logout();
         }
       }
       setLoading(false);

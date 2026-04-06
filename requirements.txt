@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-# MedInsight — Python Dependencies (All Free & Open Source)
+# AarogyaKosha — Python Dependencies (All Free & Open Source)
 # Install: pip install -r requirements.txt
 # ─────────────────────────────────────────────────────────────
 

@@ -365,8 +365,27 @@ class NLPService:
             text = pytesseract.image_to_string(image)
 
             return text.strip()
+        except ImportError:
+            print("pytesseract or Pillow not installed — skipping OCR")
+            return ""
         except Exception as e:
             print(f"OCR extraction error: {e}")
+            return ""
+
+    async def extract_text_from_docx(self, content: bytes) -> str:
+        """Extract text from Word (.docx) documents."""
+        try:
+            import docx
+            import io
+
+            doc = docx.Document(io.BytesIO(content))
+            text_parts = [p.text for p in doc.paragraphs if p.text.strip()]
+            return "\n".join(text_parts)
+        except ImportError:
+            print("python-docx not installed — skipping docx extraction")
+            return ""
+        except Exception as e:
+            print(f"DOCX extraction error: {e}")
             return ""
 
     async def generate_insights(

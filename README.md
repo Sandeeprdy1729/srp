@@ -1,9 +1,11 @@
-# MedInsight — AI-Powered Personal Medical Report Library
+# AarogyaKosha — AI-Powered Personal Health Record System  
+
+**aarōgya** (आरोग्य) = health | **kōśa** (कोश) = vault/treasury
 
 > Developed by: Vipin, Siddartha, Sandeep | GRIET AIML Department  
 > Guide: Mrunalini, Asst. Professor
 
-A secure, patient-owned Medical Report Library that lets users upload any medical files (PDFs, scans, handwritten reports) and automatically connects via FHIR to pull structured records from hospitals — powered entirely by **free and open-source tools**.
+A secure, AI-powered personal health vault that lets patients own their medical records. Upload any document (PDFs, scans, handwritten reports), get intelligent translations and insights, and seamlessly connect via ABDM (FHIR) to hospitals—all powered by **100% free and open-source technology**.
 
 ---
 

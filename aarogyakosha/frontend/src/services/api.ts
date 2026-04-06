@@ -26,8 +26,9 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Try to refresh token
+    const requestUrl = error.config?.url || '';
+    // Don't intercept 401 on auth endpoints (login, register, refresh)
+    if (error.response?.status === 401 && !requestUrl.includes('/auth/')) {
       const refreshToken = useAuthStore.getState().refreshToken;
       if (refreshToken) {
         try {
@@ -45,11 +46,9 @@ api.interceptors.response.use(
         } catch {
           // Refresh failed, logout
           useAuthStore.getState().logout();
-          window.location.href = '/login';
         }
       } else {
         useAuthStore.getState().logout();
-        window.location.href = '/login';
       }
     }
     return Promise.reject(error);

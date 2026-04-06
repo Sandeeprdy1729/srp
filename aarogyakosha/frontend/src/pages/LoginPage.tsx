@@ -555,13 +555,14 @@ export default function LoginPage() {
               <div className="space-y-2 text-sm text-gray-500">
                 <p>GRIET — AIML Department</p>
                 <p>Vipin · Siddartha · Sandeep</p>
+                <p>Guide: Mrunalini, Asst. Professor, GRIET AIML Department</p>
               </div>
             </div>
           </div>
 
           <div className="mt-10 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-2">
             <p className="text-xs text-gray-400">All rights reserved &copy; {new Date().getFullYear()} AarogyaKosha</p>
-            <p className="text-xs text-gray-400">Made with ❤️ in India</p>
+            <p className="text-xs text-gray-400">Made in India</p>
           </div>
         </div>
       </footer>

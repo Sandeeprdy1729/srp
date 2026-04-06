@@ -15,6 +15,8 @@ from app.core.config import settings
 from app.db.database import init_db
 from app.db.redis import redis_client
 from app.api.v1.router import api_router
+from app.middleware.audit import AuditMiddleware
+from app.middleware.rate_limit import RateLimitMiddleware
 
 
 @asynccontextmanager
@@ -58,6 +60,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Audit Logging (pure ASGI)
+app.add_middleware(AuditMiddleware)
+
+# Rate Limiting (pure ASGI, 60 requests/min per IP)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
+
 
 # Health check endpoint
 @app.get("/health")
@@ -75,12 +83,14 @@ async def readiness_check():
     try:
         # Check database connection
         from app.db.database import engine
+        from sqlalchemy import text
 
         async with engine.connect() as conn:
-            await conn.execute("SELECT 1")
+            await conn.execute(text("SELECT 1"))
 
         # Check Redis
-        await redis_client.ping()
+        if redis_client.redis:
+            await redis_client.redis.ping()
 
         return {"status": "ready"}
     except Exception as e:

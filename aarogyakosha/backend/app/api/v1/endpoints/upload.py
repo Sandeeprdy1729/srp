@@ -23,7 +23,7 @@ from app.services.storage_service import storage_service
 
 router = APIRouter()
 
-ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
+ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".doc", ".docx"}
 ALLOWED_MIME_TYPES = {
     "application/pdf",
     "image/jpeg",
@@ -32,6 +32,8 @@ ALLOWED_MIME_TYPES = {
     "image/bmp",
     "image/tiff",
     "image/webp",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
 
@@ -42,7 +44,6 @@ def get_file_extension(filename: str) -> str:
 
 def calculate_checksum(content: bytes) -> str:
     """Calculate SHA256 checksum of file content."""
-    return hashlib.sha256(content).read(8192)
     return hashlib.sha256(content).hexdigest()
 
 
@@ -180,6 +181,11 @@ async def process_document_background(document_id, db: AsyncSession):
         # Extract text based on file type
         if document.mime_type == "application/pdf":
             extracted_text = await nlp_service.extract_text_from_pdf(content)
+        elif document.mime_type in (
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ):
+            extracted_text = await nlp_service.extract_text_from_docx(content)
         else:
             extracted_text = await nlp_service.extract_text_from_image(content)
 

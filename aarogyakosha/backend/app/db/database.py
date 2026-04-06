@@ -1,6 +1,6 @@
 """
 AarogyaKosha - Database Configuration
-PostgreSQL with SQLAlchemy Async
+PostgreSQL with SQLAlchemy Async ORM
 """
 
 from typing import AsyncGenerator

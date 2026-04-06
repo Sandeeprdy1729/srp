@@ -19,9 +19,15 @@ class RedisClient:
 
     async def connect(self):
         """Connect to Redis."""
-        self.redis = redis.from_url(
-            settings.redis_url, encoding="utf-8", decode_responses=True
-        )
+        try:
+            self.redis = redis.from_url(
+                settings.redis_url, encoding="utf-8", decode_responses=True
+            )
+            await self.redis.ping()
+            print("Redis connected")
+        except Exception:
+            print("Redis not available — running without cache")
+            self.redis = None
 
     async def disconnect(self):
         """Disconnect from Redis."""
