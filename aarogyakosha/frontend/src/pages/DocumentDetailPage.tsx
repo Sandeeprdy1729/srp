@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Clock, CheckCircle2, AlertCircle, Loader2, Brain, Share2, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, FileText, Clock, CheckCircle2, AlertCircle, Loader2, Brain, Share2, Trash2, ChevronDown, ChevronUp, Globe } from 'lucide-react';
 import { documentsApi, aiApi, sharingApi } from '@/services/api';
+import { useAuthStore } from '@/store/auth';
 import { Document } from '@/types';
 import { format, parseISO } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -15,9 +16,12 @@ const TYPE_LABELS: Record<string, string> = {
 export default function DocumentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [doc, setDoc] = useState<Document | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [translatedText, setTranslatedText] = useState<string | null>(null);
   const [showText, setShowText] = useState(false);
   const [textContent, setTextContent] = useState('');
   const [textLoading, setTextLoading] = useState(false);
@@ -44,6 +48,30 @@ export default function DocumentDetailPage() {
       toast.error(e.response?.data?.detail || 'Analysis failed. Make sure the document has extracted text.');
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleTranslate = async () => {
+    if (!insights?.summary) return;
+    const lang = user?.preferences?.preferred_language || 'hi';
+    setTranslating(true);
+    try {
+      const textToTranslate = [
+        insights.summary,
+        ...(insights.key_findings || []),
+        ...(insights.action_items || []),
+      ].join('\n');
+      
+      const r = await aiApi.translate({
+        text: textToTranslate,
+        target_language: lang,
+      });
+      setTranslatedText(r.data.translated_text);
+      toast.success(`Translated to ${lang === 'hi' ? 'Hindi' : lang}`);
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || 'Translation failed');
+    } finally {
+      setTranslating(false);
     }
   };
 
@@ -161,15 +189,32 @@ export default function DocumentDetailPage() {
                 <Brain className="h-4 w-4 text-blue-600" />
                 AI Analysis
               </h2>
-              <button onClick={handleAnalyze} disabled={analyzing} className="btn-primary text-xs px-4 py-1.5">
-                {analyzing ? (
-                  <span className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Analyzing...
-                  </span>
-                ) : insights ? 'Re-analyze' : 'Analyze with AI'}
-              </button>
+              <div className="flex gap-2">
+                {insights && user?.preferences?.preferred_language && (
+                  <button onClick={handleTranslate} disabled={translating} className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1">
+                    <Globe className="h-3 w-3" />
+                    {translating ? 'Translating...' : 'Translate'}
+                  </button>
+                )}
+                <button onClick={handleAnalyze} disabled={analyzing} className="btn-primary text-xs px-4 py-1.5">
+                  {analyzing ? (
+                    <span className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Analyzing...
+                    </span>
+                  ) : insights ? 'Re-analyze' : 'Analyze with AI'}
+                </button>
+              </div>
             </div>
+            {translatedText && (
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-xs font-medium text-blue-700 mb-1 flex items-center gap-1">
+                  <Globe className="h-3 w-3" />
+                  Translated ({user?.preferences?.preferred_language})
+                </p>
+                <p className="text-sm text-blue-900 whitespace-pre-wrap">{translatedText}</p>
+              </div>
+            )}
             {insights ? (
               <div className="space-y-4">
                 {insights.summary && (

@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     ai,
     dashboard,
     upload,
+    memory,
 )
 
 api_router = APIRouter()
@@ -29,3 +30,4 @@ api_router.include_router(family.router, prefix="/family", tags=["Family"])
 api_router.include_router(consent.router, prefix="/consents", tags=["Consent"])
 api_router.include_router(ai.router, prefix="/ai", tags=["AI Services"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
+api_router.include_router(memory.router, prefix="/memory", tags=["Sovereign Memory"])

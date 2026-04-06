@@ -12,6 +12,9 @@ export interface User {
   is_verified: boolean;
   abha_number?: string;
   abha_address?: string;
+  preferences?: {
+    preferred_language?: string;
+  };
   created_at: string;
   last_login?: string;
 }

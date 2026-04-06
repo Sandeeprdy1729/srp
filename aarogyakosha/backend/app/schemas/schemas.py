@@ -45,6 +45,7 @@ class UserResponse(UserBase):
     is_verified: bool
     abha_number: Optional[str] = None
     abha_address: Optional[str] = None
+    preferences: Optional[dict] = None
     created_at: datetime
     last_login: Optional[datetime] = None
 

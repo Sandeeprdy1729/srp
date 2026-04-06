@@ -71,6 +71,9 @@ export const authApi = {
   logout: () => api.post('/auth/logout'),
   
   getMe: () => api.get('/auth/me'),
+  
+  updateMe: (data: { preferences?: object; full_name?: string; phone?: string; date_of_birth?: string; gender?: string }) =>
+    api.put('/auth/me', data),
 };
 
 // Documents API
@@ -163,6 +166,8 @@ export const consentApi = {
 
 // AI API
 export const aiApi = {
+  getLanguages: () => api.get('/ai/languages'),
+  
   translate: (data: { text: string; target_language: string; context?: object }) =>
     api.post('/ai/translate', data),
   

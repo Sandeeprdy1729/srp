@@ -22,27 +22,41 @@ from app.schemas.schemas import (
 from app.api.v1.endpoints.auth import get_current_active_user
 from app.services.nlp_service import nlp_service
 from app.services.correlation_service import correlation_service
+from app.services.translation_service import translation_service, SUPPORTED_LANGUAGES
 
 router = APIRouter()
+
+
+@router.get("/languages")
+async def get_supported_languages():
+    """Get list of supported translation languages."""
+    return {"languages": SUPPORTED_LANGUAGES}
 
 
 @router.post("/translate", response_model=TranslateResponse)
 async def translate_clinical_text(
     request: TranslateRequest, current_user: User = Depends(get_current_active_user)
 ):
-    """Translate clinical text to plain language."""
+    """Translate clinical text to any supported language."""
     try:
-        result = await nlp_service.translate_to_plain_language(
+        # Use deep-translator for actual translation
+        translated_text = await translation_service.translate(
             text=request.text,
             target_language=request.target_language,
-            context=request.context,
         )
+
+        # Also get plain language explanation if translating to English
+        action_items = []
+        if request.target_language != "en":
+            # Generate action items in target language
+            entities = await nlp_service.extract_entities(request.text)
+            action_items = nlp_service._generate_action_items("general", entities)
 
         return TranslateResponse(
             original_text=request.text,
-            translated_text=result.get("translated_text", ""),
+            translated_text=translated_text,
             target_language=request.target_language,
-            action_items=result.get("action_items", []),
+            action_items=action_items,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Translation failed: {str(e)}")
