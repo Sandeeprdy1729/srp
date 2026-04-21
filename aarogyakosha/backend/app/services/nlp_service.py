@@ -483,8 +483,16 @@ class NLPService:
 
         # Check for critical values
         for lab in entities.get("lab_results", []):
-            value = float(lab.get("value", 0))
+            value_str = lab.get("value", None)
             test = lab.get("test", "")
+            try:
+                # Only attempt conversion if value_str is not None or empty
+                if value_str is not None and str(value_str).strip() != "":
+                    value = float(value_str)
+                else:
+                    continue
+            except (ValueError, TypeError):
+                continue
 
             # Simple critical value checks
             if "hemoglobin" in test.lower() and value < 8:
